@@ -1,6 +1,6 @@
 # IAC Modules
 
-This repository contains reusable OpenTofu/Terraform modules for AdaptiveWorX infrastructure.
+This repository contains reusable OpenTofu modules for AdaptiveWorX infrastructure.
 
 ## Repository Structure
 
@@ -56,7 +56,7 @@ Each module should contain:
 
 ## Contributing
 
-1. Follow the [Terraform Best Practices](https://www.terraform-best-practices.com/)
+1. Follow the [OpenTofu Best Practices](https://www.terraform-best-practices.com/)
 2. Use consistent naming conventions
 3. Document all variables and outputs
 4. Include examples for common use cases
