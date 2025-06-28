@@ -4,16 +4,6 @@
 # VPC Base Module - Only VPC and Subnets
 # This module has minimal blast radius and rarely needs changes
 
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.62.0"
-    }
-  }
-  required_version = ">= 1.6.0"
-}
-
 # Local variables for computed values
 locals {
   # Compute domain name if not provided
