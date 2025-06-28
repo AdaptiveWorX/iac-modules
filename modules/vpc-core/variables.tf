@@ -7,7 +7,7 @@ variable "vpc_cidr" {
 }
 
 variable "environment" {
-  description = "Environment name (e.g., sdlc, uat, prod)"
+  description = "Environment name (e.g., sdlc, stage, prod)"
   type        = string
 }
 
@@ -41,9 +41,9 @@ variable "subnet_bits" {
     data    = number
   })
   default = {
-    public  = 4  # /20 subnets (4,096 IPs)
-    private = 2  # /18 subnets (16,384 IPs)
-    data    = 4  # /20 subnets (4,096 IPs)
+    public  = 5  # /21 subnets (2,048 IPs) - allows up to 32 subnets
+    private = 3  # /19 subnets (8,192 IPs) - allows up to 8 subnets
+    data    = 5  # /21 subnets (2,048 IPs) - allows up to 32 subnets
   }
 }
 
