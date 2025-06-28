@@ -1,0 +1,147 @@
+name: Validate Modules
+
+on:
+  pull_request:
+    paths:
+      - 'modules/**'
+      - '.github/workflows/validate-modules.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modules/**'
+
+env:
+  OPENTOFU_VERSION: "1.6.0"
+
+jobs:
+  validate:
+    name: Validate Module
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module:
+          - vpc
+          - ecs-cluster
+          - rds
+          - iam-roles
+          - network
+          - security
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.OPENTOFU_VERSION }}
+      
+      - name: Check if module exists
+        id: check_module
+        run: |
+          if [ -d "modules/${{ matrix.module }}" ] && [ -f "modules/${{ matrix.module }}/main.tf" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Initialize module
+        if: steps.check_module.outputs.exists == 'true'
+        working-directory: modules/${{ matrix.module }}
+        run: tofu init -backend=false
+      
+      - name: Validate module
+        if: steps.check_module.outputs.exists == 'true'
+        working-directory: modules/${{ matrix.module }}
+        run: tofu validate
+      
+      - name: Format check
+        if: steps.check_module.outputs.exists == 'true'
+        working-directory: modules/${{ matrix.module }}
+        run: |
+          tofu fmt -check -recursive || {
+            echo "::error::Module ${{ matrix.module }} is not properly formatted. Run 'tofu fmt' to fix."
+            exit 1
+          }
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          soft_fail: true
+          working_directory: modules
+      
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: modules
+          framework: terraform
+          soft_fail: true
+
+  documentation:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check module documentation
+        run: |
+          for module_dir in modules/*/; do
+            if [ -d "$module_dir" ] && [ -f "$module_dir/main.tf" ]; then
+              module_name=$(basename "$module_dir")
+              if [ ! -f "$module_dir/README.md" ]; then
+                echo "::error::Module $module_name is missing README.md"
+                exit 1
+              fi
+            fi
+          done
+
+  tag-release:
+    name: Tag Release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [validate, security-scan, documentation]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get next version
+        id: next_version
+        run: |
+          # Get the latest tag
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          
+          # Extract version numbers
+          version=${latest_tag#v}
+          major=$(echo $version | cut -d. -f1)
+          minor=$(echo $version | cut -d. -f2)
+          patch=$(echo $version | cut -d. -f3)
+          
+          # Increment patch version
+          patch=$((patch + 1))
+          
+          new_version="v${major}.${minor}.${patch}"
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "Next version: $new_version"
+      
+      - name: Create tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -a ${{ steps.next_version.outputs.version }} -m "Release ${{ steps.next_version.outputs.version }}"
+          git push origin ${{ steps.next_version.outputs.version }}
