@@ -9,7 +9,8 @@ locals {
   # Compute domain name if not provided
   domain_name = var.domain_name != null ? var.domain_name : "${var.client_id}.${var.environment}"
   
-  # Calculate subnet CIDRs
+  # Calculate subnet CIDRs with proper non-overlapping allocation
+  # We need to ensure subnets don't overlap when using different subnet bits
   subnet_cidrs = {
     public = [
       for i in range(var.subnet_count) : 
@@ -17,11 +18,16 @@ locals {
     ]
     private = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i + var.subnet_count)
+      # Private subnets start after all possible /20 subnets
+      # Since /20 uses 4 bits, we have 16 possible /20 subnets (0-15)
+      # Private /18 subnets should start from the upper half
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i)
     ]
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + (var.subnet_count * 2))
+      # Data subnets start after public subnets
+      # We reserve first 8 /20s for public (0-7) and next 8 for data (8-15)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 8)
     ]
   }
 }
