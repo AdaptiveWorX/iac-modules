@@ -39,7 +39,7 @@ resource "aws_vpc" "main" {
     {
       Name        = "${var.environment}-vpc"
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "opentofu"
     }
   )
 }
@@ -53,7 +53,7 @@ resource "aws_internet_gateway" "main" {
     {
       Name        = "${var.environment}-igw"
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "opentofu"
     }
   )
 }
@@ -68,7 +68,7 @@ resource "aws_egress_only_internet_gateway" "main" {
     {
       Name        = "${var.environment}-eigw"
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "opentofu"
     }
   )
 }
@@ -88,7 +88,7 @@ resource "aws_subnet" "public" {
       Name        = "${var.environment}-subnet-public-${var.region_code}-az${count.index + 1}"
       Tier        = "public"
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "opentofu"
     }
   )
 }
@@ -107,7 +107,7 @@ resource "aws_subnet" "private" {
       Name        = "${var.environment}-subnet-private-${var.region_code}-az${count.index + 1}"
       Tier        = "private"
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "opentofu"
     }
   )
 }
@@ -126,7 +126,7 @@ resource "aws_subnet" "data" {
       Name        = "${var.environment}-subnet-data-${var.region_code}-az${count.index + 1}"
       Tier        = "data"
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "opentofu"
     }
   )
 }
@@ -141,7 +141,7 @@ resource "aws_vpc_dhcp_options" "main" {
     {
       Name        = "${var.environment}-dhcp-options"
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "opentofu"
     }
   )
 }
