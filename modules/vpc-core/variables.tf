@@ -1,0 +1,66 @@
+# Copyright (c) Adaptive Technology
+# SPDX-License-Identifier: Apache-2.0
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name (e.g., sdlc, uat, prod)"
+  type        = string
+}
+
+variable "client_id" {
+  description = "Client identifier"
+  type        = string
+  default     = "adaptive"
+}
+
+variable "region_code" {
+  description = "AWS region code (e.g., use1, usw2)"
+  type        = string
+}
+
+variable "availability_zones" {
+  description = "List of availability zones"
+  type        = list(string)
+}
+
+variable "subnet_count" {
+  description = "Number of subnets to create per tier"
+  type        = number
+  default     = 2
+}
+
+variable "subnet_bits" {
+  description = "Number of additional bits for subnet CIDR calculation"
+  type = object({
+    public  = number
+    private = number
+    data    = number
+  })
+  default = {
+    public  = 4  # /20 subnets (4,096 IPs)
+    private = 2  # /18 subnets (16,384 IPs)
+    data    = 4  # /20 subnets (4,096 IPs)
+  }
+}
+
+variable "enable_ipv6" {
+  description = "Enable IPv6 for the VPC"
+  type        = bool
+  default     = true
+}
+
+variable "domain_name" {
+  description = "Domain name for DHCP options"
+  type        = string
+  default     = null
+}
+
+variable "tags" {
+  description = "Additional tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}
