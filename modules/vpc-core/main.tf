@@ -10,23 +10,35 @@ locals {
   domain_name = var.domain_name != null ? var.domain_name : "${var.client_id}.${var.environment}"
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
-  # For 6 AZs: Public and Data use /21 (32 possible), Private uses /19 (8 possible)
+  # Strategy: Divide the /16 VPC into quarters for different subnet types
+  # - First half (0-127): Reserved for larger private subnets (/19)
+  # - Third quarter (128-191): Public and Data subnets (/21)
+  # - Fourth quarter (192-255): Reserved for future use
+  
+  # For a /16 VPC:
+  # - /17 blocks: 0-127 and 128-255
+  # - /18 blocks: 0-63, 64-127, 128-191, 192-255
+  
   subnet_cidrs = {
-    public = [
-      for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i)
-    ]
+    # Private subnets: Use the first half of the VPC (0-127)
+    # Each /19 is 32 IPs in the third octet, so they go: 0, 32, 64, 96, 128, 160
     private = [
       for i in range(var.subnet_count) : 
-      # Private subnets use /19 (3 bits), giving us 8 possible subnets
       cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i)
     ]
+    
+    # Public subnets: Start at the 128 mark (third quarter)
+    # With a /16 VPC and /21 subnets (5 bits), we need to offset by 16 to start at 128
+    public = [
+      for i in range(var.subnet_count) : 
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 16)
+    ]
+    
+    # Data subnets: Continue after public subnets
+    # Public uses slots 16-21 (128.0 through 128.40), Data uses slots 22-27 (128.48 through 128.88)
     data = [
       for i in range(var.subnet_count) : 
-      # Data subnets start after public subnets
-      # With /21 (5 bits), we have 32 possible subnets
-      # Public uses 0-15, Data uses 16-31
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 16)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 22)
     ]
   }
 }
