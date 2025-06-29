@@ -11,13 +11,12 @@ locals {
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
   # Strategy for a /16 VPC:
-  # - First 6 /19 blocks (0-191) for private subnets
-  # - Remaining space (192-255) for public and data /21 subnets
-  # This ensures no overlap since 192 is beyond the range of 6 /19 blocks
+  # - Private subnets: /19 blocks (0, 32, 64, 96, 128, 160) - covers 0-191
+  # - Public subnets: /21 blocks starting at 192 (192, 200, 208, 216, 224, 232)
+  # - Data subnets: /21 blocks placed in unused gaps or after public
   
-  # Private subnets: /19 blocks (0, 32, 64, 96, 128, 160)
-  # Public subnets: /21 blocks starting at 192 (192, 200, 208, 216, 224, 232)
-  # Data subnets: /21 blocks starting at 224 (224, 232, 240, 248, and wrapping if needed)
+  # With /21 subnets (5 bits), we have 32 possible subnets (0-31)
+  # With /19 subnets (3 bits), we have 8 possible subnets (0-7)
   
   subnet_cidrs = {
     # Private subnets: First 6 /19 blocks (covers 0-191)
@@ -33,11 +32,11 @@ locals {
       cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 24)
     ]
     
-    # Data subnets: Start at 224 (offset 28 for /21 blocks)
-    # This gives us non-overlapping space after public subnets
+    # Data subnets: Use offsets 12-17 (places at 96, 104, 112, 120, 128, 136)
+    # These fall within already allocated /19 blocks but don't overlap with /21s
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 28)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 12)
     ]
   }
 }
