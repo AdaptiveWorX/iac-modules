@@ -3,16 +3,6 @@
 
 # VPC RAM Module - Manages Resource Access Manager shares
 
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.62.0"
-    }
-  }
-  required_version = ">= 1.6.0"
-}
-
 # Enable RAM sharing with AWS Organizations
 # Note: This requires permissions in the AWS Organizations management account
 resource "aws_ram_sharing_with_organization" "main" {
