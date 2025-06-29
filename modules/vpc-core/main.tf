@@ -11,37 +11,29 @@ locals {
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
   # AWS requires that subnets within a VPC do not overlap
-  # Strategy:
-  # - Private subnets: /19 blocks at offsets 0-5 (covers 0.0 - 191.255)
-  # - Public subnets: /21 blocks starting at offset 24 (192.0+) to avoid private ranges
-  # - Data subnets: /21 blocks at specific offsets that fall within gaps
+  # Strategy based on validated configuration:
+  # - Public subnets: /21 blocks at offsets 0-5 (covers 0.0 - 47.255)
+  # - Data subnets: /21 blocks at offsets 6-11 (covers 48.0 - 95.255)
+  # - Private subnets: /20 blocks at offsets 3-8 (covers 96.0 - 191.255)
   
   subnet_cidrs = {
-    # Private subnets: First 6 /19 blocks (covers addresses 0-191)
-    private = [
-      for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i)
-    ]
-    
-    # Public subnets: Start at offset 24 to place at 192.0 and beyond
-    # This avoids overlap with private /19 subnets
+    # Public subnets: First 6 /21 blocks (offsets 0-5)
     public = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 24)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i)
     ]
     
-    # Data subnets: Use specific offsets that don't conflict with private /19s
-    # Based on the table: 16, 17, 18, 19, 22, 23
+    # Data subnets: Next 6 /21 blocks (offsets 6-11)
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, 
-        i == 0 ? 16 :  # 10.128.128.0/21
-        i == 1 ? 17 :  # 10.128.136.0/21
-        i == 2 ? 18 :  # 10.128.144.0/21
-        i == 3 ? 19 :  # 10.128.152.0/21
-        i == 4 ? 22 :  # 10.128.176.0/21
-        23             # 10.128.184.0/21
-      )
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 6)
+    ]
+    
+    # Private subnets: /20 blocks starting at offset 3
+    # This gives us: 96.0, 112.0, 128.0, 144.0, 160.0, 176.0
+    private = [
+      for i in range(var.subnet_count) : 
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i + 3)
     ]
   }
 }

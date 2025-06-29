@@ -42,7 +42,7 @@ variable "subnet_bits" {
   })
   default = {
     public  = 5  # /21 subnets (2,048 IPs) - allows up to 32 subnets
-    private = 3  # /19 subnets (8,192 IPs) - allows up to 8 subnets
+    private = 4  # /20 subnets (4,096 IPs) - allows up to 16 subnets
     data    = 5  # /21 subnets (2,048 IPs) - allows up to 32 subnets
   }
 }
