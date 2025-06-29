@@ -29,8 +29,9 @@ locals {
       cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 6)
     ]
     
-    # Private subnets: /20 blocks starting at offset 3
-    # This gives us: 96.0, 112.0, 128.0, 144.0, 160.0, 176.0
+    # Private subnets: /20 blocks at offsets 3-8  
+    # For /20 blocks (4 bits), each offset = 16 addresses in third octet
+    # Offset 3 = 96.0, 4 = 112.0, 5 = 128.0, 6 = 144.0, 7 = 160.0, 8 = 176.0
     private = [
       for i in range(var.subnet_count) : 
       cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i + 3)
