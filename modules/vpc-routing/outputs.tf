@@ -39,3 +39,18 @@ output "all_route_table_ids" {
     data    = aws_route_table.data[*].id
   }
 }
+
+output "nat_gateway_ids" {
+  description = "List of NAT Gateway IDs"
+  value       = aws_nat_gateway.nat[*].id
+}
+
+output "nat_eip_ids" {
+  description = "List of Elastic IP IDs for NAT Gateways"
+  value       = aws_eip.nat[*].id
+}
+
+output "nat_eip_addresses" {
+  description = "List of Elastic IP addresses for NAT Gateways"
+  value       = aws_eip.nat[*].public_ip
+}
