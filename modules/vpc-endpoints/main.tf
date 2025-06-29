@@ -3,16 +3,6 @@
 
 # VPC Endpoints Module - Manages VPC endpoints for AWS services
 
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.62.0"
-    }
-  }
-  required_version = ">= 1.6.0"
-}
-
 # S3 Gateway Endpoint (Free)
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = var.vpc_id
