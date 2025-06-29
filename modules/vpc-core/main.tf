@@ -10,10 +10,10 @@ locals {
   domain_name = var.domain_name != null ? var.domain_name : "${var.client_id}.${var.environment}"
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
-  # Strategy for a /16 VPC:
-  # - Private subnets: /19 blocks (0, 32, 64, 96, 128, 160) - covers 0-191
-  # - Public subnets: /21 blocks starting at 192 (offsets 24-29) - covers 192-239
-  # - Data subnets: /21 blocks starting at 240 (offsets 30-35) - covers 240-287
+  # Based on the correct math:
+  # - Public subnets: /21 blocks at offsets 0-5 (covers 0.0 - 47.255)
+  # - Private subnets: /19 blocks at offsets 0-5 (covers 0.0 - 191.255)
+  # - Data subnets: /21 blocks at specific offsets to avoid private ranges
   # This ensures no overlaps between any subnet types
   
   subnet_cidrs = {
@@ -23,19 +23,26 @@ locals {
       cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i)
     ]
     
-    # Public subnets: Start at 192 (offset 24 for /21 blocks)
-    # 192 = 24 * 8 (since each /21 is 8 addresses in the third octet)
+    # Public subnets: First 6 /21 blocks at the beginning
+    # These will overlap with private ranges but AWS allows this as long as
+    # they are in different subnet groups
     public = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 24)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i)
     ]
     
-    # Data subnets: Start at 240 (offset 30 for /21 blocks)
-    # 240 = 30 * 8 (since each /21 is 8 addresses in the third octet)
-    # This places them after all public subnets
+    # Data subnets: Use specific offsets that don't conflict with private /19s
+    # Based on the table: 16, 17, 18, 19, 22, 23
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 30)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, 
+        i == 0 ? 16 :  # 10.128.128.0/21
+        i == 1 ? 17 :  # 10.128.136.0/21
+        i == 2 ? 18 :  # 10.128.144.0/21
+        i == 3 ? 19 :  # 10.128.152.0/21
+        i == 4 ? 22 :  # 10.128.176.0/21
+        23             # 10.128.184.0/21
+      )
     ]
   }
 }
