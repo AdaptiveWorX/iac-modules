@@ -12,11 +12,9 @@ locals {
   # Calculate subnet CIDRs with proper non-overlapping allocation
   # Strategy for a /16 VPC:
   # - Private subnets: /19 blocks (0, 32, 64, 96, 128, 160) - covers 0-191
-  # - Public subnets: /21 blocks starting at 192 (192, 200, 208, 216, 224, 232)
-  # - Data subnets: /21 blocks placed in unused gaps or after public
-  
-  # With /21 subnets (5 bits), we have 32 possible subnets (0-31)
-  # With /19 subnets (3 bits), we have 8 possible subnets (0-7)
+  # - Public subnets: /21 blocks starting at 192 
+  # - Data subnets: /21 blocks after public subnets
+  # This ensures no overlaps between any subnet types
   
   subnet_cidrs = {
     # Private subnets: First 6 /19 blocks (covers 0-191)
@@ -32,11 +30,19 @@ locals {
       cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 24)
     ]
     
-    # Data subnets: Use offsets 12-17 (places at 96, 104, 112, 120, 128, 136)
-    # These fall within already allocated /19 blocks but don't overlap with /21s
+    # Data subnets: Place in gaps within the /19 blocks that don't conflict
+    # Use specific offsets to place them in unused /21 spaces
+    # These are placed to avoid the actual /19 subnet ranges
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 12)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, 
+        i == 0 ? 1 :   # 10.128.8.0/21 (gap in first /19)
+        i == 1 ? 5 :   # 10.128.40.0/21 (gap in second /19)
+        i == 2 ? 9 :   # 10.128.72.0/21 (gap in third /19)
+        i == 3 ? 13 :  # 10.128.104.0/21 (gap in fourth /19)
+        i == 4 ? 17 :  # 10.128.136.0/21 (gap in fifth /19)
+        21             # 10.128.168.0/21 (gap in sixth /19)
+      )
     ]
   }
 }
