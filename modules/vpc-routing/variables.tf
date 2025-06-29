@@ -7,7 +7,7 @@ variable "vpc_id" {
 }
 
 variable "environment" {
-  description = "Environment name (e.g., sdlc, uat, prod)"
+  description = "Environment name (e.g., sdlc, stage, prod)"
   type        = string
 }
 
@@ -37,6 +37,12 @@ variable "enable_nat_gateway" {
   description = "Whether NAT Gateway is enabled"
   type        = bool
   default     = true
+}
+
+variable "single_nat_gateway" {
+  description = "Use a single NAT Gateway for all AZs (cost savings)"
+  type        = bool
+  default     = false
 }
 
 variable "enable_ipv6" {

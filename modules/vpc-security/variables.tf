@@ -23,7 +23,7 @@ variable "default_network_acl_id" {
 }
 
 variable "environment" {
-  description = "Environment name (e.g., sdlc, uat, prod)"
+  description = "Environment name (e.g., sdlc, stage, prod)"
   type        = string
 }
 

@@ -3,14 +3,36 @@
 
 # VPC Routing Module - Manages Route Tables and Routes
 
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.62.0"
+# NAT Gateways
+resource "aws_eip" "nat" {
+  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.availability_zones)) : 0
+  domain = "vpc"
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.environment}-eip-nat-az${count.index + 1}"
+      Environment = var.environment
+      ManagedBy   = "terraform"
     }
-  }
-  required_version = ">= 1.6.0"
+  )
+}
+
+resource "aws_nat_gateway" "nat" {
+  count         = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.availability_zones)) : 0
+  allocation_id = aws_eip.nat[count.index].id
+  subnet_id     = var.public_subnet_ids[count.index]
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.environment}-nat-az${count.index + 1}"
+      Environment = var.environment
+      ManagedBy   = "terraform"
+    }
+  )
+
+  depends_on = [var.igw_id]
 }
 
 # Public Route Table
@@ -63,7 +85,7 @@ resource "aws_route" "private_nat_gateway" {
   count                  = var.enable_nat_gateway ? length(var.availability_zones) : 0
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = var.nat_gateway_ids[min(count.index, length(var.nat_gateway_ids) - 1)]
+  nat_gateway_id         = var.single_nat_gateway ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
 }
 
 # Private Routes for IPv6 (via Egress-only Internet Gateway)
@@ -95,7 +117,7 @@ resource "aws_route" "data_nat_gateway" {
   count                  = var.enable_nat_gateway ? length(var.availability_zones) : 0
   route_table_id         = aws_route_table.data[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = var.nat_gateway_ids[min(count.index, length(var.nat_gateway_ids) - 1)]
+  nat_gateway_id         = var.single_nat_gateway ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
 }
 
 # Data Routes for IPv6 (via Egress-only Internet Gateway)

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 variable "environment" {
-  description = "Environment name (e.g., sdlc, uat, prod)"
+  description = "Environment name (e.g., sdlc, stage, prod)"
   type        = string
 }
 
