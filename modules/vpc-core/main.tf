@@ -10,11 +10,11 @@ locals {
   domain_name = var.domain_name != null ? var.domain_name : "${var.client_id}.${var.environment}"
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
-  # Based on the correct math:
-  # - Public subnets: /21 blocks at offsets 0-5 (covers 0.0 - 47.255)
+  # AWS requires that subnets within a VPC do not overlap
+  # Strategy:
   # - Private subnets: /19 blocks at offsets 0-5 (covers 0.0 - 191.255)
-  # - Data subnets: /21 blocks at specific offsets to avoid private ranges
-  # This ensures no overlaps between any subnet types
+  # - Public subnets: /21 blocks starting at offset 24 (192.0+) to avoid private ranges
+  # - Data subnets: /21 blocks at specific offsets that fall within gaps
   
   subnet_cidrs = {
     # Private subnets: First 6 /19 blocks (covers addresses 0-191)
@@ -23,12 +23,11 @@ locals {
       cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i)
     ]
     
-    # Public subnets: First 6 /21 blocks at the beginning
-    # These will overlap with private ranges but AWS allows this as long as
-    # they are in different subnet groups
+    # Public subnets: Start at offset 24 to place at 192.0 and beyond
+    # This avoids overlap with private /19 subnets
     public = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 24)
     ]
     
     # Data subnets: Use specific offsets that don't conflict with private /19s
