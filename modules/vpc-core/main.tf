@@ -10,35 +10,34 @@ locals {
   domain_name = var.domain_name != null ? var.domain_name : "${var.client_id}.${var.environment}"
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
-  # Strategy: Divide the /16 VPC into quarters for different subnet types
-  # - First half (0-127): Reserved for larger private subnets (/19)
-  # - Third quarter (128-191): Public and Data subnets (/21)
-  # - Fourth quarter (192-255): Reserved for future use
+  # Strategy for a /16 VPC:
+  # - First 6 /19 blocks (0-191) for private subnets
+  # - Remaining space (192-255) for public and data /21 subnets
+  # This ensures no overlap since 192 is beyond the range of 6 /19 blocks
   
-  # For a /16 VPC:
-  # - /17 blocks: 0-127 and 128-255
-  # - /18 blocks: 0-63, 64-127, 128-191, 192-255
+  # Private subnets: /19 blocks (0, 32, 64, 96, 128, 160)
+  # Public subnets: /21 blocks starting at 192 (192, 200, 208, 216, 224, 232)
+  # Data subnets: /21 blocks starting at 224 (224, 232, 240, 248, and wrapping if needed)
   
   subnet_cidrs = {
-    # Private subnets: Use the first half of the VPC (0-127)
-    # Each /19 is 32 IPs in the third octet, so they go: 0, 32, 64, 96, 128, 160
+    # Private subnets: First 6 /19 blocks (covers 0-191)
     private = [
       for i in range(var.subnet_count) : 
       cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i)
     ]
     
-    # Public subnets: Start at the 128 mark (third quarter)
-    # With a /16 VPC and /21 subnets (5 bits), we need to offset by 16 to start at 128
+    # Public subnets: Start at 192 (offset 24 for /21 blocks)
+    # 192 = 24 * 8 (since each /21 is 8 addresses in the third octet)
     public = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 16)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i + 24)
     ]
     
-    # Data subnets: Continue after public subnets
-    # Public uses slots 16-21 (128.0 through 128.40), Data uses slots 22-27 (128.48 through 128.88)
+    # Data subnets: Start at 224 (offset 28 for /21 blocks)
+    # This gives us non-overlapping space after public subnets
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 22)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 28)
     ]
   }
 }
