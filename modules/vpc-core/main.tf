@@ -13,8 +13,8 @@ locals {
   # AWS requires that subnets within a VPC do not overlap
   # Strategy based on validated configuration:
   # - Public subnets: /21 blocks at offsets 0-5 (covers 0.0 - 47.255)
-  # - Data subnets: /20 blocks at offsets 3-8 (covers 48.0 - 143.255)
-  # - Private subnets: /20 blocks at offsets 9-14 (covers 144.0 - 239.255)
+  # - Data subnets: /21 blocks at offsets 6-11 (covers 48.0 - 95.255)
+  # - Private subnets: /20 blocks at offsets 6-11 (covers 96.0 - 191.255)
   
   subnet_cidrs = {
     # Public subnets: First 6 /21 blocks (offsets 0-5)
@@ -23,18 +23,18 @@ locals {
       cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i)
     ]
     
-    # Data subnets: 6 /20 blocks (offsets 3-8)
+    # Data subnets: Next 6 /21 blocks (offsets 6-11)
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 3)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 6)
     ]
     
-    # Private subnets: 6 /20 blocks at offsets 9-14  
+    # Private subnets: /20 blocks at offsets 6-11  
     # For /20 blocks (4 bits), each offset = 16 addresses in third octet
-    # Offset 9 = 144.0, 10 = 160.0, 11 = 176.0, 12 = 192.0, 13 = 208.0, 14 = 224.0
+    # Offset 6 = 96.0, 7 = 112.0, 8 = 128.0, 9 = 144.0, 10 = 160.0, 11 = 176.0
     private = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i + 9)
+      cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i + 6)
     ]
   }
 }
