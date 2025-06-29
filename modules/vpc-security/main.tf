@@ -3,16 +3,6 @@
 
 # VPC NACLs Module - Manages Network Access Control Lists
 
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.62.0"
-    }
-  }
-  required_version = ">= 1.6.0"
-}
-
 # Default NACL - Deny all traffic as security fallback
 resource "aws_default_network_acl" "default" {
   default_network_acl_id = var.default_network_acl_id
