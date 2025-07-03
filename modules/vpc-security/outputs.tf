@@ -45,3 +45,8 @@ output "data_nacl_association_ids" {
   description = "List of data NACL association IDs"
   value       = aws_network_acl_association.data[*].id
 }
+
+output "default_security_group_id" {
+  description = "ID of the default security group (configured to deny all)"
+  value       = aws_default_security_group.default.id
+}

@@ -18,6 +18,24 @@ resource "aws_default_network_acl" "default" {
   )
 }
 
+# Default Security Group - Lock it down (deny all)
+resource "aws_default_security_group" "default" {
+  vpc_id = var.vpc_id
+
+  # No ingress rules = deny all inbound
+  # No egress rules = deny all outbound
+  
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.environment}-default-sg-locked"
+      Description = "Default security group - locked down (deny all)"
+      Environment = var.environment
+      ManagedBy   = "terraform"
+    }
+  )
+}
+
 # Public NACL
 resource "aws_network_acl" "public" {
   vpc_id = var.vpc_id

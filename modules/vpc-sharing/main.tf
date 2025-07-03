@@ -5,12 +5,15 @@
 
 # Enable RAM sharing with AWS Organizations
 # Note: This requires permissions in the AWS Organizations management account
+# IMPORTANT: This is a global setting that should not be destroyed with individual VPC shares
 resource "aws_ram_sharing_with_organization" "main" {
   count    = var.enable_org_sharing ? 1 : 0
   provider = aws.org_management
   
   lifecycle {
     ignore_changes = all
+    # Prevent destruction of this global organization setting
+    prevent_destroy = true
   }
 }
 
