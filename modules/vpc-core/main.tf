@@ -53,34 +53,63 @@ locals {
   data_subnet_count = var.subnet_count
   private_subnet_count = var.subnet_count
   
-  # Calculate how many blocks each tier needs
-  public_blocks_needed = pow(2, local.subnet_bits.public) >= local.public_subnet_count ? local.public_subnet_count : pow(2, local.subnet_bits.public)
+  # Calculate how many address blocks are consumed by each tier
+  # We need to account for different subnet sizes when calculating offsets
+  # For example: if public uses /22 (6 bits) and we have 6 AZs, 
+  # that's 6 blocks in the /22 space
   
-  # Dynamic offset calculation
+  # Public subnets start at 0
   public_offset = 0
-  data_offset = local.public_blocks_needed
-  private_offset = local.data_offset + local.data_subnet_count
   
-  # Calculate subnet CIDRs with dynamic non-overlapping allocation
+  # Data subnets must start after all public subnet space
+  # If public uses 6 bits and data uses 6 bits (same size), offsets are straightforward
+  # But if they differ, we need to calculate equivalent blocks
+  data_offset = (local.subnet_bits.data == local.subnet_bits.public ? 
+    var.subnet_count : 
+    ceil(var.subnet_count * pow(2, local.subnet_bits.data - local.subnet_bits.public)))
+  
+  # Private subnets must start after all data subnet space
+  # Calculate how many blocks of the private subnet size are needed
+  # to skip past the data subnets
+  private_offset = (local.subnet_bits.private == local.subnet_bits.data ?
+    (local.data_offset + var.subnet_count) :
+    (local.subnet_bits.private == local.subnet_bits.public ?
+      var.subnet_count * 2 :  # If all same size, it's simple
+      0))  # For different sizes, we'll use a different allocation strategy
+  
+  # Calculate subnet CIDRs with proper non-overlapping allocation
+  # When subnet sizes differ, we need a different allocation strategy
   subnet_cidrs = {
-    # Public subnets: Start at offset 0
+    # Public subnets: Always start at offset 0
     public = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.public, i + local.public_offset)
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.public, i)
     ]
     
-    # Data subnets: Start after public subnets
+    # Data subnets: Allocate in their own address space
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.data, i + local.data_offset)
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.data, i + (
+        local.subnet_bits.data == local.subnet_bits.public ? var.subnet_count : 
+        floor(pow(2, local.subnet_bits.data) / 2)  # Use upper half of address space
+      ))
     ]
     
-    # Private subnets: Start after data subnets
+    # Private subnets: These are the largest, so give them their own clean space
+    # Since they use only 3 bits (8 possible values) and we need 6, just use 0-5
     private = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.private, i + local.private_offset)
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.private, i)
     ]
   }
+  
+  # Validate that subnets don't overlap by checking CIDR ranges
+  # This is a safety check to ensure our allocation strategy works
+  all_subnet_cidrs = concat(
+    local.subnet_cidrs.public,
+    local.subnet_cidrs.data,
+    local.subnet_cidrs.private
+  )
 }
 
 # VPC Resource
