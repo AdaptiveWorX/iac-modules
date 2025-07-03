@@ -34,17 +34,13 @@ variable "subnet_count" {
 }
 
 variable "subnet_bits" {
-  description = "Number of additional bits for subnet CIDR calculation"
+  description = "Number of additional bits for subnet CIDR calculation. If not provided, optimal sizes will be calculated automatically based on VPC size and AZ count."
   type = object({
     public  = number
     private = number
     data    = number
   })
-  default = {
-    public  = 5  # /21 subnets (2,048 IPs) - allows up to 32 subnets
-    private = 4  # /20 subnets (4,096 IPs) - allows up to 16 subnets
-    data    = 5  # /21 subnets (2,048 IPs) - allows up to 32 subnets
-  }
+  default = null  # Enable automatic calculation by default
 }
 
 variable "enable_ipv6" {

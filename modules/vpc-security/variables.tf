@@ -53,3 +53,35 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_ssh_access" {
+  description = "Enable SSH access through NACLs. Should be false for production environments"
+  type        = bool
+  default     = false
+}
+
+variable "ssh_allowed_cidr_blocks" {
+  description = "List of CIDR blocks allowed for SSH access. Only used if enable_ssh_access is true"
+  type        = list(string)
+  default     = []
+  validation {
+    condition     = length(var.ssh_allowed_cidr_blocks) > 0 || !var.enable_ssh_access
+    error_message = "ssh_allowed_cidr_blocks must contain at least one CIDR block when enable_ssh_access is true"
+  }
+}
+
+variable "enable_rdp_access" {
+  description = "Enable RDP access through NACLs. Should be false for production environments"
+  type        = bool
+  default     = false
+}
+
+variable "rdp_allowed_cidr_blocks" {
+  description = "List of CIDR blocks allowed for RDP access. Only used if enable_rdp_access is true"
+  type        = list(string)
+  default     = []
+  validation {
+    condition     = length(var.rdp_allowed_cidr_blocks) > 0 || !var.enable_rdp_access
+    error_message = "rdp_allowed_cidr_blocks must contain at least one CIDR block when enable_rdp_access is true"
+  }
+}

@@ -9,32 +9,76 @@ locals {
   # Compute domain name if not provided
   domain_name = var.domain_name != null ? var.domain_name : "${var.client_id}.${var.environment}"
   
-  # Calculate subnet CIDRs with proper non-overlapping allocation
-  # AWS requires that subnets within a VPC do not overlap
-  # Strategy based on validated configuration:
-  # - Public subnets: /21 blocks at offsets 0-5 (covers 0.0 - 47.255)
-  # - Data subnets: /21 blocks at offsets 6-11 (covers 48.0 - 95.255)
-  # - Private subnets: /20 blocks at offsets 6-11 (covers 96.0 - 191.255)
+  # Automatic subnet sizing calculation
+  vpc_mask = tonumber(split("/", var.vpc_cidr)[1])
+  available_bits = 32 - local.vpc_mask
   
+  # Calculate optimal subnet bits automatically if not provided
+  # This maximizes IP utilization while respecting AWS constraints
+  auto_subnet_bits = {
+    # Public subnets: Small (10% of space) - for ALBs, NAT GWs
+    # Adjust based on number of AZs and VPC size
+    public = local.available_bits >= 16 ? (
+      var.subnet_count >= 6 ? 6 :    # 6 AZs: /22 (1,024 IPs)
+      var.subnet_count >= 4 ? 6 :    # 4-5 AZs: /22 (1,024 IPs)
+      var.subnet_count >= 3 ? 6 :    # 3 AZs: /22 (1,024 IPs)
+      7                              # 2 AZs: /23 (512 IPs)
+    ) : (local.available_bits >= 12 ? 4 : 3)
+    
+    # Private subnets: Large (70% of space) - for workloads
+    # Scale based on AZ count to maximize utilization
+    private = local.available_bits >= 16 ? (
+      var.subnet_count >= 6 ? 3 :    # 6 AZs: /19 (8,192 IPs) = 49,152 total
+      var.subnet_count >= 4 ? 2 :    # 4-5 AZs: /18 (16,384 IPs) = 65,536 total
+      var.subnet_count >= 3 ? 2 :    # 3 AZs: /18 (16,384 IPs) = 49,152 total
+      1                              # 2 AZs: /17 (32,768 IPs) = 65,536 total
+    ) : (var.subnet_count >= 3 ? 2 : 1)
+    
+    # Data subnets: Medium (20% of space) - for RDS, ElastiCache
+    # Balance between public and private needs
+    data = local.available_bits >= 16 ? (
+      var.subnet_count >= 6 ? 6 :    # 6 AZs: /22 (1,024 IPs) = 6,144 total
+      var.subnet_count >= 4 ? 5 :    # 4-5 AZs: /21 (2,048 IPs) = 8,192 total
+      var.subnet_count >= 3 ? 5 :    # 3 AZs: /21 (2,048 IPs) = 6,144 total
+      5                              # 2 AZs: /21 (2,048 IPs) = 4,096 total
+    ) : (var.subnet_count >= 3 ? 4 : 3)
+  }
+  
+  # Use provided subnet_bits or fall back to automatic calculation
+  subnet_bits = var.subnet_bits != null ? var.subnet_bits : local.auto_subnet_bits
+  
+  # Calculate dynamic offsets to prevent overlaps
+  # This ensures subnets don't overlap regardless of their sizes
+  public_subnet_count = var.subnet_count
+  data_subnet_count = var.subnet_count
+  private_subnet_count = var.subnet_count
+  
+  # Calculate how many blocks each tier needs
+  public_blocks_needed = pow(2, local.subnet_bits.public) >= local.public_subnet_count ? local.public_subnet_count : pow(2, local.subnet_bits.public)
+  
+  # Dynamic offset calculation
+  public_offset = 0
+  data_offset = local.public_blocks_needed
+  private_offset = local.data_offset + local.data_subnet_count
+  
+  # Calculate subnet CIDRs with dynamic non-overlapping allocation
   subnet_cidrs = {
-    # Public subnets: First 6 /21 blocks (offsets 0-5)
+    # Public subnets: Start at offset 0
     public = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.public, i)
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.public, i + local.public_offset)
     ]
     
-    # Data subnets: Next 6 /21 blocks (offsets 6-11)
+    # Data subnets: Start after public subnets
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.data, i + 6)
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.data, i + local.data_offset)
     ]
     
-    # Private subnets: /20 blocks at offsets 6-11  
-    # For /20 blocks (4 bits), each offset = 16 addresses in third octet
-    # Offset 6 = 96.0, 7 = 112.0, 8 = 128.0, 9 = 144.0, 10 = 160.0, 11 = 176.0
+    # Private subnets: Start after data subnets
     private = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, var.subnet_bits.private, i + 6)
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.private, i + local.private_offset)
     ]
   }
 }

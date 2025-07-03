@@ -45,6 +45,12 @@ variable "single_nat_gateway" {
   default     = false
 }
 
+variable "nat_gateway_count" {
+  description = "Number of NAT Gateways to create. If null, creates one per AZ unless single_nat_gateway is true"
+  type        = number
+  default     = null
+}
+
 variable "enable_ipv6" {
   description = "Whether IPv6 is enabled"
   type        = bool

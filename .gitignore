@@ -50,3 +50,23 @@ Thumbs.db
 # Testing
 test/fixtures/
 test/reports/
+
+# SSL Certificates and Keys - NEVER commit these!
+*.crt
+*.key
+*.pem
+*.pfx
+*.p12
+*.ca-bundle
+*.csr
+*.cer
+*.der
+*.p7b
+*.p7r
+*.srl
+*.keystore
+*.jks
+
+# Certificate directories
+**/certs/*
+!**/certs/README.md

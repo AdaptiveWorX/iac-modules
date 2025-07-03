@@ -3,9 +3,21 @@
 
 # VPC Routing Module - Manages Route Tables and Routes
 
+locals {
+  # Determine the number of NAT gateways to create
+  nat_gateway_count = var.enable_nat_gateway ? (
+    var.nat_gateway_count != null ? var.nat_gateway_count : (
+      var.single_nat_gateway ? 1 : length(var.availability_zones)
+    )
+  ) : 0
+  
+  # Ensure we don't exceed the number of available AZs
+  actual_nat_gateway_count = min(local.nat_gateway_count, length(var.availability_zones))
+}
+
 # NAT Gateways
 resource "aws_eip" "nat" {
-  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.availability_zones)) : 0
+  count  = local.actual_nat_gateway_count
   domain = "vpc"
 
   tags = merge(
@@ -19,7 +31,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "nat" {
-  count         = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.availability_zones)) : 0
+  count         = local.actual_nat_gateway_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = var.public_subnet_ids[count.index]
 
@@ -85,7 +97,8 @@ resource "aws_route" "private_nat_gateway" {
   count                  = var.enable_nat_gateway ? length(var.availability_zones) : 0
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = var.single_nat_gateway ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
+  # Route to the appropriate NAT gateway based on availability
+  nat_gateway_id         = aws_nat_gateway.nat[min(count.index, local.actual_nat_gateway_count - 1)].id
 }
 
 # Private Routes for IPv6 (via Egress-only Internet Gateway)
@@ -117,7 +130,8 @@ resource "aws_route" "data_nat_gateway" {
   count                  = var.enable_nat_gateway ? length(var.availability_zones) : 0
   route_table_id         = aws_route_table.data[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = var.single_nat_gateway ? aws_nat_gateway.nat[0].id : aws_nat_gateway.nat[count.index].id
+  # Route to the appropriate NAT gateway based on availability
+  nat_gateway_id         = aws_nat_gateway.nat[min(count.index, local.actual_nat_gateway_count - 1)].id
 }
 
 # Data Routes for IPv6 (via Egress-only Internet Gateway)

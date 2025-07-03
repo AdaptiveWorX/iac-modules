@@ -86,26 +86,68 @@ resource "aws_network_acl_rule" "public_inbound_https_ipv4" {
   to_port        = 443
 }
 
+# SSH access - restricted to known IP ranges or disabled by default
 resource "aws_network_acl_rule" "public_inbound_ssh_ipv4" {
+  count          = var.enable_ssh_access ? 1 : 0
   network_acl_id = aws_network_acl.public.id
   rule_number    = 120
   egress         = false
   protocol       = "tcp"
   rule_action    = "allow"
-  cidr_block     = "0.0.0.0/0"
+  cidr_block     = var.ssh_allowed_cidr_blocks[0]
   from_port      = 22
   to_port        = 22
 }
 
+# Additional SSH rules for multiple allowed CIDR blocks
+resource "aws_network_acl_rule" "public_inbound_ssh_ipv4_additional" {
+  count          = var.enable_ssh_access ? length(var.ssh_allowed_cidr_blocks) - 1 : 0
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 121 + count.index
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = var.ssh_allowed_cidr_blocks[count.index + 1]
+  from_port      = 22
+  to_port        = 22
+}
+
+# RDP access - restricted to known IP ranges or disabled by default
 resource "aws_network_acl_rule" "public_inbound_rdp_ipv4" {
+  count          = var.enable_rdp_access ? 1 : 0
   network_acl_id = aws_network_acl.public.id
   rule_number    = 130
   egress         = false
   protocol       = "tcp"
   rule_action    = "allow"
-  cidr_block     = "0.0.0.0/0"
+  cidr_block     = var.rdp_allowed_cidr_blocks[0]
   from_port      = 3389
   to_port        = 3389
+}
+
+# Additional RDP rules for multiple allowed CIDR blocks
+resource "aws_network_acl_rule" "public_inbound_rdp_ipv4_additional" {
+  count          = var.enable_rdp_access ? length(var.rdp_allowed_cidr_blocks) - 1 : 0
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 131 + count.index
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = var.rdp_allowed_cidr_blocks[count.index + 1]
+  from_port      = 3389
+  to_port        = 3389
+}
+
+# ICMP/Ping support - Allow ICMP echo request/reply for network troubleshooting
+resource "aws_network_acl_rule" "public_inbound_icmp_ipv4" {
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 140
+  egress         = false
+  protocol       = "icmp"
+  rule_action    = "allow"
+  cidr_block     = "0.0.0.0/0"
+  icmp_type      = -1
+  icmp_code      = -1
 }
 
 resource "aws_network_acl_rule" "public_inbound_ephemeral_ipv4" {
@@ -186,6 +228,18 @@ resource "aws_network_acl_rule" "private_inbound_vpc_ipv4" {
   cidr_block     = var.vpc_cidr
 }
 
+# ICMP/Ping support for private subnets - Allow from VPC CIDR
+resource "aws_network_acl_rule" "private_inbound_icmp_ipv4" {
+  network_acl_id = aws_network_acl.private.id
+  rule_number    = 150
+  egress         = false
+  protocol       = "icmp"
+  rule_action    = "allow"
+  cidr_block     = var.vpc_cidr
+  icmp_type      = -1
+  icmp_code      = -1
+}
+
 resource "aws_network_acl_rule" "private_inbound_ephemeral_ipv4" {
   network_acl_id = aws_network_acl.private.id
   rule_number    = 200
@@ -247,6 +301,18 @@ resource "aws_network_acl_rule" "data_inbound_vpc_ipv4" {
   protocol       = "-1"
   rule_action    = "allow"
   cidr_block     = var.vpc_cidr
+}
+
+# ICMP/Ping support for data subnets - Allow from VPC CIDR
+resource "aws_network_acl_rule" "data_inbound_icmp_ipv4" {
+  network_acl_id = aws_network_acl.data.id
+  rule_number    = 150
+  egress         = false
+  protocol       = "icmp"
+  rule_action    = "allow"
+  cidr_block     = var.vpc_cidr
+  icmp_type      = -1
+  icmp_code      = -1
 }
 
 resource "aws_network_acl_rule" "data_inbound_vpc_ipv6" {
