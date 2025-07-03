@@ -79,27 +79,35 @@ locals {
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
   # When subnet sizes differ, we need a different allocation strategy
+  # The key is to allocate smaller subnets first, then larger ones
   subnet_cidrs = {
-    # Public subnets: Always start at offset 0
+    # Public subnets: Small subnets, start at offset 0
     public = [
       for i in range(var.subnet_count) : 
       cidrsubnet(var.vpc_cidr, local.subnet_bits.public, i)
     ]
     
-    # Data subnets: Allocate in their own address space
+    # Data subnets: Also small, continue after public subnets
     data = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.data, i + (
-        local.subnet_bits.data == local.subnet_bits.public ? var.subnet_count : 
-        floor(pow(2, local.subnet_bits.data) / 2)  # Use upper half of address space
-      ))
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.data, i + var.subnet_count)
     ]
     
-    # Private subnets: These are the largest, so give them their own clean space
-    # Since they use only 3 bits (8 possible values) and we need 6, just use 0-5
+    # Private subnets: These are the largest (/19 = 3 bits)
+    # With 6 AZs, we need blocks 0-5 in the /19 space
+    # But we need to ensure they don't overlap with the smaller subnets
+    # Since public+data use /22 (6 bits), they consume the first portion
+    # Calculate how many /19 blocks are consumed by public+data subnets
     private = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.private, i)
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.private, 
+        i + (local.subnet_bits.private < local.subnet_bits.public ? 
+          # If private subnets are larger (fewer bits), calculate offset
+          ceil((var.subnet_count * 2) / pow(2, local.subnet_bits.public - local.subnet_bits.private)) :
+          # If same size or smaller, just continue sequentially
+          var.subnet_count * 2
+        )
+      )
     ]
   }
   
