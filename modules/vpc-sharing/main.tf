@@ -35,6 +35,10 @@ resource "aws_ram_resource_association" "subnets" {
 
   resource_arn       = each.value
   resource_share_arn = aws_ram_resource_share.vpc.arn
+  
+  depends_on = [
+    aws_ram_sharing_with_organization.main
+  ]
 }
 
 # Share with specific accounts
