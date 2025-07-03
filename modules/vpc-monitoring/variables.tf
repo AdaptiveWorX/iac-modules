@@ -50,7 +50,6 @@ variable "enable_monitoring_alarms" {
 variable "alarm_email" {
   description = "Email address for alarm notifications"
   type        = string
-  default     = "notifications@adaptiveworx.com"
 }
 
 variable "nat_gateway_ids" {
