@@ -64,6 +64,11 @@ resource "aws_ram_principal_association" "org_unit" {
 data "aws_ram_resource_share" "status" {
   name            = aws_ram_resource_share.vpc.name
   resource_owner  = "SELF"
+  
+  filter {
+    name   = "Status"
+    values = ["ACTIVE"]
+  }
 
   depends_on = [
     aws_ram_resource_association.subnets,
