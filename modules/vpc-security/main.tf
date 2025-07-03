@@ -150,6 +150,19 @@ resource "aws_network_acl_rule" "public_inbound_icmp_ipv4" {
   icmp_code      = -1
 }
 
+# ICMPv6 support for public subnets
+resource "aws_network_acl_rule" "public_inbound_icmp_ipv6" {
+  count              = var.enable_ipv6 ? 1 : 0
+  network_acl_id     = aws_network_acl.public.id
+  rule_number        = 141
+  egress             = false
+  protocol           = "58"  # ICMPv6 protocol number
+  rule_action        = "allow"
+  ipv6_cidr_block    = "::/0"
+  icmp_type          = -1
+  icmp_code          = -1
+}
+
 resource "aws_network_acl_rule" "public_inbound_ephemeral_ipv4" {
   network_acl_id = aws_network_acl.public.id
   rule_number    = 200
@@ -240,6 +253,19 @@ resource "aws_network_acl_rule" "private_inbound_icmp_ipv4" {
   icmp_code      = -1
 }
 
+# ICMPv6 support for private subnets
+resource "aws_network_acl_rule" "private_inbound_icmp_ipv6" {
+  count              = var.enable_ipv6 && var.vpc_ipv6_cidr != null ? 1 : 0
+  network_acl_id     = aws_network_acl.private.id
+  rule_number        = 151
+  egress             = false
+  protocol           = "58"  # ICMPv6 protocol number
+  rule_action        = "allow"
+  ipv6_cidr_block    = var.vpc_ipv6_cidr
+  icmp_type          = -1
+  icmp_code          = -1
+}
+
 resource "aws_network_acl_rule" "private_inbound_ephemeral_ipv4" {
   network_acl_id = aws_network_acl.private.id
   rule_number    = 200
@@ -313,6 +339,19 @@ resource "aws_network_acl_rule" "data_inbound_icmp_ipv4" {
   cidr_block     = var.vpc_cidr
   icmp_type      = -1
   icmp_code      = -1
+}
+
+# ICMPv6 support for data subnets
+resource "aws_network_acl_rule" "data_inbound_icmp_ipv6" {
+  count              = var.enable_ipv6 && var.vpc_ipv6_cidr != null ? 1 : 0
+  network_acl_id     = aws_network_acl.data.id
+  rule_number        = 151
+  egress             = false
+  protocol           = "58"  # ICMPv6 protocol number
+  rule_action        = "allow"
+  ipv6_cidr_block    = var.vpc_ipv6_cidr
+  icmp_type          = -1
+  icmp_code          = -1
 }
 
 resource "aws_network_acl_rule" "data_inbound_vpc_ipv6" {

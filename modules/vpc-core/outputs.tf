@@ -43,6 +43,11 @@ output "public_subnet_cidrs" {
   value       = aws_subnet.public[*].cidr_block
 }
 
+output "public_subnet_ipv6_cidrs" {
+  description = "List of IPv6 CIDR blocks of public subnets"
+  value       = var.enable_ipv6 ? aws_subnet.public[*].ipv6_cidr_block : []
+}
+
 output "private_subnet_ids" {
   description = "List of IDs of private subnets"
   value       = aws_subnet.private[*].id
@@ -58,6 +63,11 @@ output "private_subnet_cidrs" {
   value       = aws_subnet.private[*].cidr_block
 }
 
+output "private_subnet_ipv6_cidrs" {
+  description = "List of IPv6 CIDR blocks of private subnets"
+  value       = var.enable_ipv6 ? aws_subnet.private[*].ipv6_cidr_block : []
+}
+
 output "data_subnet_ids" {
   description = "List of IDs of data subnets"
   value       = aws_subnet.data[*].id
@@ -71,6 +81,11 @@ output "data_subnet_arns" {
 output "data_subnet_cidrs" {
   description = "List of CIDR blocks of data subnets"
   value       = aws_subnet.data[*].cidr_block
+}
+
+output "data_subnet_ipv6_cidrs" {
+  description = "List of IPv6 CIDR blocks of data subnets"
+  value       = var.enable_ipv6 ? aws_subnet.data[*].ipv6_cidr_block : []
 }
 
 output "availability_zones" {
