@@ -12,8 +12,6 @@ resource "aws_ram_sharing_with_organization" "main" {
   
   lifecycle {
     ignore_changes = all
-    # Prevent destruction of this global organization setting
-    prevent_destroy = true
   }
 }
 
