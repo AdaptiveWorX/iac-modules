@@ -3,18 +3,6 @@
 
 # VPC RAM Module - Manages Resource Access Manager shares
 
-# Enable RAM sharing with AWS Organizations
-# Note: This requires permissions in the AWS Organizations management account
-# IMPORTANT: This is a global setting that should not be destroyed with individual VPC shares
-resource "aws_ram_sharing_with_organization" "main" {
-  count    = var.enable_org_sharing ? 1 : 0
-  provider = aws.org_management
-  
-  lifecycle {
-    ignore_changes = all
-  }
-}
-
 # RAM Resource Share
 resource "aws_ram_resource_share" "vpc" {
   name                      = "${var.environment}-vpc-share"
@@ -36,10 +24,6 @@ resource "aws_ram_resource_association" "subnets" {
 
   resource_arn       = each.value
   resource_share_arn = aws_ram_resource_share.vpc.arn
-  
-  depends_on = [
-    aws_ram_sharing_with_organization.main
-  ]
 }
 
 # Share with specific accounts

@@ -6,10 +6,19 @@ This module manages AWS Resource Access Manager (RAM) shares for VPC resources, 
 
 - Share VPC subnets with specific AWS accounts
 - Share VPC subnets with AWS Organization units
-- Enable RAM sharing with AWS Organizations (requires management account permissions)
 - Automatic resource association management
-- Support for multi-provider configurations
 - Comprehensive tagging support
+
+## Prerequisites
+
+**IMPORTANT**: Before using this module, you must manually enable RAM sharing with AWS Organizations:
+
+1. Log in to the AWS Organizations management account
+2. Navigate to the AWS RAM console
+3. Go to Settings
+4. Enable "Enable sharing with AWS Organizations"
+
+This is a one-time global setting that must be enabled in each region where you want to share resources. The module does not manage this setting to avoid issues during destroy operations.
 
 ## Architecture
 
@@ -36,9 +45,6 @@ module "vpc_sharing" {
   
   share_with_accounts = ["987654321098", "876543210987"]
   
-  # Disable org sharing if not using management account
-  enable_org_sharing = false
-  
   tags = {
     Environment = "prod"
     Project     = "infrastructure"
@@ -59,14 +65,6 @@ module "vpc_sharing" {
   share_with_org_unit = true
   org_unit_arn       = "arn:aws:organizations::123456789012:ou/o-abc123/ou-def456"
   
-  # Enable organization-wide sharing
-  enable_org_sharing = true
-  
-  # Configure providers for org management
-  providers = {
-    aws                = aws
-    aws.org_management = aws.org_management
-  }
   
   tags = {
     Environment = "prod"
@@ -96,12 +94,6 @@ module "vpc_sharing" {
   share_with_org_unit = true
   org_unit_arn       = "arn:aws:organizations::123456789012:ou/o-abc123/ou-def456"
   
-  enable_org_sharing = true
-  
-  providers = {
-    aws                = aws
-    aws.org_management = aws.org_management
-  }
   
   tags = {
     Environment = "prod"
@@ -112,10 +104,7 @@ module "vpc_sharing" {
 
 ## Provider Configuration
 
-This module supports two provider configurations:
-
-1. **Default provider** (`aws`) - Used for creating RAM shares and associations
-2. **Organization management provider** (`aws.org_management`) - Used for enabling RAM sharing with AWS Organizations
+This module uses the default AWS provider for creating RAM shares and associations.
 
 ### Example Provider Configuration in Terragrunt
 
@@ -125,7 +114,7 @@ terraform {
     commands = ["init", "plan", "apply", "destroy"]
     arguments = []
     env_vars = {
-      AWS_PROFILE = "worx-secops"  # Default profile
+      AWS_PROFILE = "worx-secops"
     }
   }
 }
@@ -136,12 +125,6 @@ generate "providers" {
   contents  = <<EOF
 provider "aws" {
   region = "${local.aws_region}"
-}
-
-provider "aws" {
-  alias   = "org_management"
-  region  = "${local.aws_region}"
-  profile = "adaptive-master"  # Management account profile
 }
 EOF
 }
@@ -186,23 +169,21 @@ When subnets are shared via RAM, the following permissions are granted to princi
 1. **Share Creation Failures**
    - Verify AWS Organizations is enabled
    - Check that accounts are in the same organization
-   - Ensure RAM is enabled for the organization
+   - **Ensure RAM sharing with Organizations is enabled** (see Prerequisites)
 
-2. **Provider Configuration**
-   - Confirm org_management provider has correct permissions
-   - Verify AWS profiles are correctly configured
-   - Check credential chain and authentication
-
-3. **Resource Access Issues**
+2. **Resource Access Issues**
    - Shared resources may take a few minutes to propagate
    - Verify principal associations are ASSOCIATED
    - Check that target accounts have accepted the share
 
+3. **Destroy Operations**
+   - The module will cleanly destroy all RAM shares and associations
+   - The global RAM organization setting must be managed separately
+
 ## Requirements
 
 - AWS Organizations must be configured
-- RAM must be enabled for the organization
-- For `enable_org_sharing = true`, the org_management provider must have permissions to manage RAM in the AWS Organizations management account
+- **RAM sharing with AWS Organizations must be manually enabled** (see Prerequisites)
 - Target accounts must be in the same AWS Organization
 - OpenTofu >= 1.10.0
 - AWS Provider ~> 6.0
@@ -213,7 +194,6 @@ When subnets are shared via RAM, the following permissions are granted to princi
 |------|-------------|------|---------|----------|
 | environment | Environment name (e.g., sdlc, stage, prod) | string | n/a | yes |
 | subnet_arns | List of subnet ARNs to share | list(string) | n/a | yes |
-| enable_org_sharing | Enable RAM sharing with AWS Organizations | bool | true | no |
 | share_with_accounts | List of AWS account IDs to share with | list(string) | [] | no |
 | share_with_org_unit | Whether to share with an organization unit | bool | false | no |
 | org_unit_arn | ARN of the organization unit to share with | string | null | no |
