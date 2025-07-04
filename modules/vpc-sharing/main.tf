@@ -59,20 +59,3 @@ resource "aws_ram_principal_association" "org_unit" {
   principal          = var.org_unit_arn
   resource_share_arn = aws_ram_resource_share.vpc.arn
 }
-
-# Data source to get shared resource status
-data "aws_ram_resource_share" "status" {
-  name            = aws_ram_resource_share.vpc.name
-  resource_owner  = "SELF"
-  
-  filter {
-    name   = "Status"
-    values = ["ACTIVE"]
-  }
-
-  depends_on = [
-    aws_ram_resource_association.subnets,
-    aws_ram_principal_association.accounts,
-    aws_ram_principal_association.org_unit
-  ]
-}

@@ -125,7 +125,7 @@ terraform {
     commands = ["init", "plan", "apply", "destroy"]
     arguments = []
     env_vars = {
-      AWS_PROFILE = "adaptive-secops"  # Default profile
+      AWS_PROFILE = "worx-secops"  # Default profile
     }
   }
 }

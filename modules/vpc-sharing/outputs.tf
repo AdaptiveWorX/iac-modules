@@ -13,7 +13,7 @@ output "resource_share_arn" {
 
 output "resource_share_status" {
   description = "Status of the RAM resource share"
-  value       = data.aws_ram_resource_share.status.status
+  value       = aws_ram_resource_share.vpc.arn != null ? "ACTIVE" : "INACTIVE"
 }
 
 output "shared_subnet_arns" {
