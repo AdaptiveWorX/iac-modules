@@ -8,6 +8,11 @@ output "vpc_id" {
   value       = aws_vpc.main.id
 }
 
+output "vpc_name" {
+  description = "The name of the VPC"
+  value       = aws_vpc.main.tags["Name"]
+}
+
 output "vpc_cidr" {
   description = "The CIDR block of the VPC"
   value       = aws_vpc.main.cidr_block
@@ -23,6 +28,11 @@ output "internet_gateway_id" {
   value       = aws_internet_gateway.main.id
 }
 
+output "internet_gateway_name" {
+  description = "The name of the Internet Gateway"
+  value       = aws_internet_gateway.main.tags["Name"]
+}
+
 output "egress_only_internet_gateway_id" {
   description = "The ID of the Egress-only Internet Gateway"
   value       = try(aws_egress_only_internet_gateway.main[0].id, null)
@@ -31,6 +41,11 @@ output "egress_only_internet_gateway_id" {
 output "public_subnet_ids" {
   description = "List of IDs of public subnets"
   value       = aws_subnet.public[*].id
+}
+
+output "public_subnet_names" {
+  description = "List of names of public subnets"
+  value       = [for subnet in aws_subnet.public : subnet.tags["Name"]]
 }
 
 output "public_subnet_arns" {
@@ -53,6 +68,11 @@ output "private_subnet_ids" {
   value       = aws_subnet.private[*].id
 }
 
+output "private_subnet_names" {
+  description = "List of names of private subnets"
+  value       = [for subnet in aws_subnet.private : subnet.tags["Name"]]
+}
+
 output "private_subnet_arns" {
   description = "List of ARNs of private subnets"
   value       = aws_subnet.private[*].arn
@@ -71,6 +91,11 @@ output "private_subnet_ipv6_cidrs" {
 output "data_subnet_ids" {
   description = "List of IDs of data subnets"
   value       = aws_subnet.data[*].id
+}
+
+output "data_subnet_names" {
+  description = "List of names of data subnets"
+  value       = [for subnet in aws_subnet.data : subnet.tags["Name"]]
 }
 
 output "data_subnet_arns" {
@@ -106,6 +131,11 @@ output "default_network_acl_id" {
 output "dhcp_options_id" {
   description = "The ID of the DHCP Options Set"
   value       = aws_vpc_dhcp_options.main.id
+}
+
+output "dhcp_options_name" {
+  description = "The name of the DHCP Options Set"
+  value       = aws_vpc_dhcp_options.main.tags["Name"]
 }
 
 output "environment" {

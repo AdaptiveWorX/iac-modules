@@ -3,6 +3,20 @@
 
 # VPC RAM Module - Manages Resource Access Manager shares
 
+# Merge account lists from both sources
+locals {
+  # Combine accounts from list and map formats
+  all_accounts = merge(
+    { for account in var.share_with_accounts : account => "Account ${account}" },
+    var.share_with_accounts_map
+  )
+  
+  # Create a formatted string of accounts with their names for documentation
+  accounts_description = join(", ", [
+    for account_id, account_name in local.all_accounts : "${account_name} (${account_id})"
+  ])
+}
+
 # RAM Resource Share
 resource "aws_ram_resource_share" "vpc" {
   name                      = "${var.environment}-vpc-share"
@@ -11,9 +25,10 @@ resource "aws_ram_resource_share" "vpc" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.environment}-vpc-share"
-      Environment = var.environment
-      ManagedBy   = "terraform"
+      Name             = "${var.environment}-vpc-share"
+      Environment      = var.environment
+      ManagedBy        = "terraform"
+      SharedAccounts   = local.accounts_description
     }
   )
 }
@@ -26,11 +41,11 @@ resource "aws_ram_resource_association" "subnets" {
   resource_share_arn = aws_ram_resource_share.vpc.arn
 }
 
-# Share with specific accounts
+# Share with specific accounts (supports both list and map formats)
 resource "aws_ram_principal_association" "accounts" {
-  for_each = toset(var.share_with_accounts)
+  for_each = local.all_accounts
 
-  principal          = each.value
+  principal          = each.key
   resource_share_arn = aws_ram_resource_share.vpc.arn
 }
 

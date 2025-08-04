@@ -14,33 +14,26 @@ locals {
   available_bits = 32 - local.vpc_mask
   
   # Calculate optimal subnet bits automatically if not provided
-  # This maximizes IP utilization while respecting AWS constraints
   auto_subnet_bits = {
-    # Public subnets: Small (10% of space) - for ALBs, NAT GWs
-    # Adjust based on number of AZs and VPC size
     public = local.available_bits >= 16 ? (
-      var.subnet_count >= 6 ? 6 :    # 6 AZs: /22 (1,024 IPs)
-      var.subnet_count >= 4 ? 6 :    # 4-5 AZs: /22 (1,024 IPs)
-      var.subnet_count >= 3 ? 6 :    # 3 AZs: /22 (1,024 IPs)
-      7                              # 2 AZs: /23 (512 IPs)
+      var.subnet_count >= 6 ? 7 :
+      var.subnet_count >= 4 ? 7 :
+      var.subnet_count >= 3 ? 6 :
+      7
     ) : (local.available_bits >= 12 ? 4 : 3)
     
-    # Private subnets: Large (70% of space) - for workloads
-    # Scale based on AZ count to maximize utilization
     private = local.available_bits >= 16 ? (
-      var.subnet_count >= 6 ? 3 :    # 6 AZs: /19 (8,192 IPs) = 49,152 total
-      var.subnet_count >= 4 ? 2 :    # 4-5 AZs: /18 (16,384 IPs) = 65,536 total
-      var.subnet_count >= 3 ? 2 :    # 3 AZs: /18 (16,384 IPs) = 49,152 total
-      1                              # 2 AZs: /17 (32,768 IPs) = 65,536 total
+      var.subnet_count >= 6 ? 3 :
+      var.subnet_count >= 4 ? 3 :
+      var.subnet_count >= 3 ? 2 :
+      1
     ) : (var.subnet_count >= 3 ? 2 : 1)
     
-    # Data subnets: Medium (20% of space) - for RDS, ElastiCache
-    # Balance between public and private needs
     data = local.available_bits >= 16 ? (
-      var.subnet_count >= 6 ? 6 :    # 6 AZs: /22 (1,024 IPs) = 6,144 total
-      var.subnet_count >= 4 ? 5 :    # 4-5 AZs: /21 (2,048 IPs) = 8,192 total
-      var.subnet_count >= 3 ? 5 :    # 3 AZs: /21 (2,048 IPs) = 6,144 total
-      5                              # 2 AZs: /21 (2,048 IPs) = 4,096 total
+      var.subnet_count >= 6 ? 6 :
+      var.subnet_count >= 4 ? 6 :
+      var.subnet_count >= 3 ? 5 :
+      5
     ) : (var.subnet_count >= 3 ? 4 : 3)
   }
   
@@ -48,71 +41,37 @@ locals {
   subnet_bits = var.subnet_bits != null ? var.subnet_bits : local.auto_subnet_bits
   
   # Calculate dynamic offsets to prevent overlaps
-  # This ensures subnets don't overlap regardless of their sizes
   public_subnet_count = var.subnet_count
   data_subnet_count = var.subnet_count
   private_subnet_count = var.subnet_count
   
-  # Calculate how many address blocks are consumed by each tier
-  # We need to account for different subnet sizes when calculating offsets
-  # For example: if public uses /22 (6 bits) and we have 6 AZs, 
-  # that's 6 blocks in the /22 space
+  # Calculate number of subnets for each tier
+  private_subnets = local.private_subnet_count
+  data_subnets = local.data_subnet_count
+  public_subnets = local.public_subnet_count
   
-  # Public subnets start at 0
-  public_offset = 0
-  
-  # Data subnets must start after all public subnet space
-  # If public uses 6 bits and data uses 6 bits (same size), offsets are straightforward
-  # But if they differ, we need to calculate equivalent blocks
-  data_offset = (local.subnet_bits.data == local.subnet_bits.public ? 
-    var.subnet_count : 
-    ceil(var.subnet_count * pow(2, local.subnet_bits.data - local.subnet_bits.public)))
-  
-  # Private subnets must start after all data subnet space
-  # Calculate how many blocks of the private subnet size are needed
-  # to skip past the data subnets
-  private_offset = (local.subnet_bits.private == local.subnet_bits.data ?
-    (local.data_offset + var.subnet_count) :
-    (local.subnet_bits.private == local.subnet_bits.public ?
-      var.subnet_count * 2 :  # If all same size, it's simple
-      0))  # For different sizes, we'll use a different allocation strategy
+  # Calculate offsets in each subnet's own address space
+  private_offset = 0
+  data_offset = local.private_subnets * pow(2, local.subnet_bits.data - local.subnet_bits.private)
+  public_offset = (local.private_subnets * pow(2, local.subnet_bits.public - local.subnet_bits.private)) + (local.data_subnets * pow(2, local.subnet_bits.public - local.subnet_bits.data))
   
   # Calculate subnet CIDRs with proper non-overlapping allocation
-  # When subnet sizes differ, we need a different allocation strategy
-  # The key is to allocate smaller subnets first, then larger ones
   subnet_cidrs = {
-    # Public subnets: Small subnets, start at offset 0
-    public = [
-      for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.public, i)
-    ]
-    
-    # Data subnets: Also small, continue after public subnets
-    data = [
-      for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.data, i + var.subnet_count)
-    ]
-    
-    # Private subnets: These are the largest (/19 = 3 bits)
-    # With 6 AZs, we need blocks 0-5 in the /19 space
-    # But we need to ensure they don't overlap with the smaller subnets
-    # Since public+data use /22 (6 bits), they consume the first portion
-    # Calculate how many /19 blocks are consumed by public+data subnets
     private = [
       for i in range(var.subnet_count) : 
-      cidrsubnet(var.vpc_cidr, local.subnet_bits.private, 
-        i + (local.subnet_bits.private < local.subnet_bits.public ? 
-          # If private subnets are larger (fewer bits), calculate offset
-          ceil((var.subnet_count * 2) / pow(2, local.subnet_bits.public - local.subnet_bits.private)) :
-          # If same size or smaller, just continue sequentially
-          var.subnet_count * 2
-        )
-      )
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.private, local.private_offset + i)
+    ]
+    data = [
+      for i in range(var.subnet_count) : 
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.data, local.data_offset + i)
+    ]
+    public = [
+      for i in range(var.subnet_count) : 
+      cidrsubnet(var.vpc_cidr, local.subnet_bits.public, local.public_offset + i)
     ]
   }
   
   # Validate that subnets don't overlap by checking CIDR ranges
-  # This is a safety check to ensure our allocation strategy works
   all_subnet_cidrs = concat(
     local.subnet_cidrs.public,
     local.subnet_cidrs.data,
@@ -138,7 +97,7 @@ resource "aws_vpc" "main" {
   )
 }
 
-# Internet Gateway (needed for public subnets to function)
+# Internet Gateway
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 

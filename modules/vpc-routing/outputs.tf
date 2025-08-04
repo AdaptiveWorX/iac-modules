@@ -23,14 +23,29 @@ output "public_route_table_id" {
   value       = aws_route_table.public.id
 }
 
+output "public_route_table_name" {
+  description = "Name of the public route table"
+  value       = aws_route_table.public.tags["Name"]
+}
+
 output "private_route_table_ids" {
   description = "List of private route table IDs"
   value       = aws_route_table.private[*].id
 }
 
+output "private_route_table_names" {
+  description = "List of private route table names"
+  value       = [for rt in aws_route_table.private : rt.tags["Name"]]
+}
+
 output "data_route_table_ids" {
   description = "List of data route table IDs"
   value       = aws_route_table.data[*].id
+}
+
+output "data_route_table_names" {
+  description = "List of data route table names"
+  value       = [for rt in aws_route_table.data : rt.tags["Name"]]
 }
 
 output "nat_gateway_count" {

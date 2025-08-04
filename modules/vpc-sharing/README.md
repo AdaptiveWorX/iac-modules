@@ -31,7 +31,7 @@ The module creates the following sharing architecture:
 
 ## Usage
 
-### Basic Account-to-Account Sharing
+### Basic Account-to-Account Sharing (List Format)
 
 ```hcl
 module "vpc_sharing" {
@@ -44,6 +44,31 @@ module "vpc_sharing" {
   ]
   
   share_with_accounts = ["987654321098", "876543210987"]
+  
+  tags = {
+    Environment = "prod"
+    Project     = "infrastructure"
+  }
+}
+```
+
+### Account-to-Account Sharing with Descriptive Names (Map Format)
+
+```hcl
+module "vpc_sharing" {
+  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
+
+  environment = "prod"
+  subnet_arns = [
+    "arn:aws:ec2:us-east-1:123456789012:subnet/subnet-12345",
+    "arn:aws:ec2:us-east-1:123456789012:subnet/subnet-67890"
+  ]
+  
+  # Use map format to include descriptive names for better documentation
+  share_with_accounts_map = {
+    "987654321098" = "Production"
+    "876543210987" = "Development"
+  }
   
   tags = {
     Environment = "prod"
@@ -194,10 +219,13 @@ When subnets are shared via RAM, the following permissions are granted to princi
 |------|-------------|------|---------|----------|
 | environment | Environment name (e.g., sdlc, stage, prod) | string | n/a | yes |
 | subnet_arns | List of subnet ARNs to share | list(string) | n/a | yes |
-| share_with_accounts | List of AWS account IDs to share with | list(string) | [] | no |
+| share_with_accounts | List of AWS account IDs to share with (for backwards compatibility) | list(string) | [] | no |
+| share_with_accounts_map | Map of AWS account IDs to descriptive names for sharing | map(string) | {} | no |
 | share_with_org_unit | Whether to share with an organization unit | bool | false | no |
 | org_unit_arn | ARN of the organization unit to share with | string | null | no |
 | tags | Additional tags to apply to resources | map(string) | {} | no |
+
+**Note**: You can use either `share_with_accounts` (list format) or `share_with_accounts_map` (map format), or both. The module will merge accounts from both sources. Using the map format is recommended for better documentation and clarity.
 
 ## Outputs
 
@@ -208,5 +236,7 @@ When subnets are shared via RAM, the following permissions are granted to princi
 | resource_share_status | Status of the RAM resource share |
 | shared_subnet_arns | List of subnet ARNs that are shared |
 | shared_with_accounts | List of account IDs the resources are shared with |
+| shared_accounts_details | Map of account IDs to their descriptive names |
+| shared_accounts_description | Formatted string of shared accounts with names |
 | shared_with_org_unit | Organization unit ARN the resources are shared with |
 | org_sharing_enabled | Whether RAM sharing with AWS Organizations is enabled |

@@ -18,9 +18,15 @@ variable "enable_org_sharing" {
 }
 
 variable "share_with_accounts" {
-  description = "List of AWS account IDs to share with"
+  description = "List of AWS account IDs to share with (for backwards compatibility)"
   type        = list(string)
   default     = []
+}
+
+variable "share_with_accounts_map" {
+  description = "Map of AWS account IDs to descriptive names for sharing"
+  type        = map(string)
+  default     = {}
 }
 
 variable "share_with_org_unit" {

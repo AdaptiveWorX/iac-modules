@@ -23,7 +23,17 @@ output "shared_subnet_arns" {
 
 output "shared_with_accounts" {
   description = "List of account IDs the resources are shared with"
-  value       = var.share_with_accounts
+  value       = keys(local.all_accounts)
+}
+
+output "shared_accounts_details" {
+  description = "Map of account IDs to their descriptive names"
+  value       = local.all_accounts
+}
+
+output "shared_accounts_description" {
+  description = "Formatted string of shared accounts with names"
+  value       = local.accounts_description
 }
 
 output "shared_with_org_unit" {

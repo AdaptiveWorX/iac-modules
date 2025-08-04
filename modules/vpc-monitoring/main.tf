@@ -5,20 +5,26 @@
 
 locals {
   flow_log_name = "${var.environment}-vpc-flow-logs"
+  # Use data.aws_region.current.id instead of deprecated .name
+  current_region = data.aws_region.current.id
 }
+
+# Data source for current region
+data "aws_region" "current" {}
 
 # Data source for current AWS account
 data "aws_caller_identity" "current" {}
 
 # S3 bucket for VPC Flow Logs
 resource "aws_s3_bucket" "flow_logs" {
-  count  = var.enable_flow_logs && var.flow_log_destination == "s3" ? 1 : 0
-  bucket = "${var.environment}-vpc-flow-logs-${data.aws_caller_identity.current.account_id}"
+  count         = var.enable_flow_logs && var.flow_log_destination == "s3" ? 1 : 0
+  bucket        = "${var.environment}-vpc-flow-logs-${local.current_region}-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true  # Allow bucket deletion even when not empty
 
   tags = merge(
     var.tags,
     {
-      Name        = local.flow_log_name
+      Name        = "${local.flow_log_name}-${local.current_region}"
       Environment = var.environment
       Purpose     = "VPC Flow Logs Storage"
       ManagedBy   = "terraform"
@@ -35,10 +41,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "flow_logs" {
     id     = "expire-old-logs"
     status = "Enabled"
 
+    # Apply to all objects in the bucket
+    filter {}
+
     expiration {
       days = var.flow_logs_retention_days
     }
   }
+
+  # Lifecycle block to handle destroy-time issues
+  lifecycle {
+    create_before_destroy = true
+  }
+  
+  # Ensure the bucket exists before creating lifecycle configuration
+  depends_on = [aws_s3_bucket.flow_logs]
 }
 
 # S3 bucket encryption
@@ -84,7 +101,7 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
 # IAM Role for VPC Flow Logs
 resource "aws_iam_role" "flow_logs" {
   count = var.enable_flow_logs ? 1 : 0
-  name  = "${var.environment}-vpc-flow-logs-role"
+  name  = "${var.environment}-vpc-flow-logs-role-${local.current_region}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -102,7 +119,7 @@ resource "aws_iam_role" "flow_logs" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.environment}-vpc-flow-logs-role"
+      Name        = "${var.environment}-vpc-flow-logs-role-${local.current_region}"
       Environment = var.environment
       ManagedBy   = "terraform"
     }
@@ -162,7 +179,7 @@ resource "aws_iam_role_policy" "flow_logs_s3" {
 resource "aws_flow_log" "vpc" {
   count = var.enable_flow_logs ? 1 : 0
 
-  iam_role_arn             = aws_iam_role.flow_logs[0].arn
+  iam_role_arn             = var.flow_log_destination == "cloudwatch" ? aws_iam_role.flow_logs[0].arn : null
   log_destination_type     = var.flow_log_destination
   log_destination          = var.flow_log_destination == "s3" ? aws_s3_bucket.flow_logs[0].arn : aws_cloudwatch_log_group.flow_logs[0].arn
   traffic_type             = var.flow_log_traffic_type
