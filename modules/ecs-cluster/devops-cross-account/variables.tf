@@ -23,9 +23,9 @@ variable "enable_container_insights" {
 }
 
 variable "log_retention_days" {
-  description = "Number of days to retain CloudWatch logs"
+  description = "Number of days to retain CloudWatch logs (minimum 365 days for compliance)"
   type        = number
-  default     = 14
+  default     = 365
 }
 
 variable "kms_key_arn" {

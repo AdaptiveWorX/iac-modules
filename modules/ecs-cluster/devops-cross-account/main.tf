@@ -34,7 +34,7 @@ resource "aws_ecs_cluster" "this" {
 resource "aws_cloudwatch_log_group" "ecs_exec" {
   name              = "/aws/ecs/${var.cluster_name}/exec"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn  # If null, logs won't be encrypted with KMS
+  kms_key_id        = var.kms_key_arn != null ? var.kms_key_arn : (length(aws_kms_key.ecs) > 0 ? aws_kms_key.ecs[0].arn : null)
 
   tags = merge(
     var.tags,
@@ -47,7 +47,7 @@ resource "aws_cloudwatch_log_group" "ecs_exec" {
 resource "aws_cloudwatch_log_group" "ecs_tasks" {
   name              = "/aws/ecs/${var.cluster_name}/tasks"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn  # If null, logs won't be encrypted with KMS
+  kms_key_id        = var.kms_key_arn != null ? var.kms_key_arn : (length(aws_kms_key.ecs) > 0 ? aws_kms_key.ecs[0].arn : null)
   
   tags = merge(
     var.tags,

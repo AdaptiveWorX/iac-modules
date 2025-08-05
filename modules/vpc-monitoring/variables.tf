@@ -24,9 +24,9 @@ variable "flow_log_destination" {
 }
 
 variable "flow_logs_retention_days" {
-  description = "Number of days to retain flow logs"
+  description = "Number of days to retain flow logs (minimum 365 days for compliance)"
   type        = number
-  default     = 7
+  default     = 365
 }
 
 variable "flow_log_traffic_type" {

@@ -5,7 +5,7 @@ resource "aws_ecs_cluster" "cluster" {
   name = "${var.prefix}-cf-tunnel-cluster"
   setting {
     name  = "containerInsights"
-    value = "disabled"
+    value = "enabled"
   }
 }
 
@@ -55,6 +55,7 @@ resource "aws_ecs_task_definition" "taskdef" {
       essential = true
       image     = "cloudflare/cloudflared:${var.cloudflare_version}",
       command   = ["tunnel", "run", var.tunnel_id]
+      readOnlyRootFilesystem = true
       secrets = [
         {
           name      = "TUNNEL_TOKEN",
@@ -75,18 +76,20 @@ resource "aws_ecs_task_definition" "taskdef" {
 
 resource "aws_cloudwatch_log_group" "logs" {
   name              = "${var.prefix}-cf-tunnel-logs"
-  retention_in_days = 1
+  retention_in_days = 365
 }
 
 resource "aws_security_group" "tunnel_sg" {
   name        = "${var.prefix}-cf-tunnel-sg"
   description = "Security group for the ${var.prefix} Cloudflare tunnel"
   vpc_id      = var.vpc_id
+  
   egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic for Cloudflare tunnel"
   }
 }
 
