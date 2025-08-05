@@ -1,3 +1,6 @@
+# Copyright (c) Adaptive Technology
+# SPDX-License-Identifier: Apache-2.0
+
 terraform {
   required_version = ">= 1.10.0"
   
@@ -5,6 +8,7 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 6.0"
+      configuration_aliases = [aws.peer]
     }
   }
 }
