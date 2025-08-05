@@ -15,7 +15,7 @@ This module manages VPC endpoints for AWS services, providing private connectivi
 
 ```hcl
 module "vpc_endpoints" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-endpoints?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-endpoints?ref=v1.0.0"
 
   vpc_id              = module.vpc_core.vpc_id
   vpc_cidr            = module.vpc_core.vpc_cidr

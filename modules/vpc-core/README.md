@@ -55,7 +55,7 @@ The module now features automatic subnet sizing that maximizes IP utilization wi
 
 ```hcl
 module "vpc_core" {
-  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-core?ref=v1.0.2"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-core?ref=v1.0.0"
   
   vpc_cidr           = "10.0.0.0/16"
   environment        = "production"
@@ -73,7 +73,7 @@ module "vpc_core" {
 
 ```hcl
 module "vpc_core" {
-  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-core?ref=v1.0.2"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-core?ref=v1.0.0"
   
   vpc_cidr           = "10.0.0.0/16"
   environment        = "production"

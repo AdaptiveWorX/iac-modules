@@ -24,7 +24,7 @@ The module implements a defense-in-depth approach with NACLs:
 
 ```hcl
 module "vpc_security" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-security?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-security?ref=v1.0.0"
 
   vpc_id                 = module.vpc_core.vpc_id
   vpc_cidr               = module.vpc_core.vpc_cidr

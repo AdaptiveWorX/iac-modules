@@ -26,7 +26,7 @@ The module creates the following routing architecture:
 
 ```hcl
 module "vpc_routing" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-routing?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-routing?ref=v1.0.0"
 
   vpc_id             = module.vpc_core.vpc_id
   environment        = "prod"
@@ -59,7 +59,7 @@ module "vpc_routing" {
 
 ```hcl
 module "vpc_routing" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-routing?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-routing?ref=v1.0.0"
 
   vpc_id             = module.vpc_core.vpc_id
   environment        = "dev"
@@ -92,7 +92,7 @@ module "vpc_routing" {
 
 ```hcl
 module "vpc_routing" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-routing?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-routing?ref=v1.0.0"
 
   vpc_id             = module.vpc_core.vpc_id
   environment        = "isolated"

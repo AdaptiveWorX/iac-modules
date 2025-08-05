@@ -17,7 +17,7 @@ This module manages cross-region VPC peering connections with automatic route cr
 
 ```hcl
 module "vpc_peering" {
-  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-peering?ref=v1.0.6"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-peering?ref=v1.0.0"
   
   providers = {
     aws      = aws

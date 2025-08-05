@@ -35,7 +35,7 @@ The module creates the following sharing architecture:
 
 ```hcl
 module "vpc_sharing" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
 
   environment = "prod"
   subnet_arns = [
@@ -56,7 +56,7 @@ module "vpc_sharing" {
 
 ```hcl
 module "vpc_sharing" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
 
   environment = "prod"
   subnet_arns = [
@@ -81,7 +81,7 @@ module "vpc_sharing" {
 
 ```hcl
 module "vpc_sharing" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
 
   environment = "prod"
   subnet_arns = module.vpc_core.private_subnet_ids
@@ -102,7 +102,7 @@ module "vpc_sharing" {
 
 ```hcl
 module "vpc_sharing" {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-sharing?ref=v1.0.0"
 
   environment = "prod"
   
