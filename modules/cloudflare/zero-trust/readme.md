@@ -61,4 +61,4 @@ module "cloudflare_zero_trust" {
 
 ## License
 
-MPL-2.0 
+Apache-2.0

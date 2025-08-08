@@ -1,34 +1,66 @@
 # Copyright (c) Adaptive Technology
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: Apache-2.0
 
 variable "cloudflare_account_id" {
-  description = "The account ID in Cloudflare."
+  description = "The Cloudflare account ID"
   type        = string
 }
 
-variable "prefix" {
-  description = "Prefix for naming resources."
+variable "cloudflare_zone_id" {
+  description = "The Cloudflare zone ID (optional, for access applications)"
+  type        = string
+  default     = ""
+}
+
+variable "tunnel_name" {
+  description = "Name of the Cloudflare tunnel"
   type        = string
 }
 
-variable "organization" {
-  description = "Terraform Cloud organization name."
+variable "environment" {
+  description = "Environment name (sdlc, stage, prod)"
   type        = string
+  validation {
+    condition     = contains(["sdlc", "stage", "prod"], var.environment)
+    error_message = "Environment must be one of: sdlc, stage, prod"
+  }
 }
 
-variable "routes" {
-  description = "List of routes for the Cloudflare Tunnel."
+variable "vpc_routes" {
+  description = "List of VPC CIDR blocks to route through the tunnel"
   type = list(object({
-    network = string
-    comment = string
+    cidr        = string
+    description = string
   }))
+  default = []
 }
 
-variable "ingress_rules" {
-  description = "List of ingress rules for the Cloudflare Tunnel."
-  type = list(object({
-    hostname = optional(string)
-    path     = optional(string)
-    service  = string
-  }))
+variable "store_token_in_ssm" {
+  description = "Whether to store the tunnel token in AWS SSM Parameter Store"
+  type        = bool
+  default     = true
+}
+
+variable "create_access_application" {
+  description = "Whether to create a Zero Trust Access application"
+  type        = bool
+  default     = false
+}
+
+variable "access_domain" {
+  description = "Domain for the Zero Trust Access application"
+  type        = string
+  default     = ""
+}
+
+variable "session_duration" {
+  description = "Session duration for Zero Trust Access"
+  type        = string
+  default     = "24h"
+}
+
+variable "tags" {
+  description = "Tags to apply to AWS resources"
+  type        = map(string)
+  default     = {}
 }

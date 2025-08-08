@@ -1,49 +1,78 @@
 # Copyright (c) Adaptive Technology
-# SPDX-License-Identifier: MPL-2.0
-
-terraform {
-  required_providers {
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = ">4.0.0"
-    }
-  }
-}
+# SPDX-License-Identifier: Apache-2.0
 
 # Create the Cloudflare Zero Trust Tunnel
 resource "random_password" "tunnel_secret" {
   length = 64
+  special = true
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared" "tunnel" {
   account_id = var.cloudflare_account_id
-  name       = "${var.prefix}-cf-tunnel"
+  name       = var.tunnel_name
   secret     = base64encode(random_password.tunnel_secret.result)
 }
 
-# Create Cloudflare Tunnel Routes from a list
-resource "cloudflare_zero_trust_tunnel_route" "routes" {
-  for_each   = zipmap([for i, route in var.routes : i], var.routes)
+# Create tunnel token for cloudflared authentication
+resource "cloudflare_zero_trust_tunnel_cloudflared_token" "token" {
   account_id = var.cloudflare_account_id
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
-  network    = each.value.network
-  comment    = "Tunnel route for ${each.value.comment}"
 }
 
+# Create Cloudflare Tunnel Routes for VPC CIDR blocks
+resource "cloudflare_zero_trust_tunnel_route" "vpc_routes" {
+  for_each   = { for idx, route in var.vpc_routes : idx => route }
+  account_id = var.cloudflare_account_id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
+  network    = each.value.cidr
+  comment    = each.value.description
+}
+
+# Configure tunnel with WARP routing enabled
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "config" {
   account_id = var.cloudflare_account_id
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
+  
   config {
     warp_routing {
       enabled = true
     }
-    dynamic "ingress_rule" {
-      for_each = var.ingress_rules
-      content {
-        hostname = ingress_rule.value.hostname
-        path     = ingress_rule.value.path
-        service  = ingress_rule.value.service
-      }
+    
+    # Default catch-all rule for WARP traffic
+    ingress_rule {
+      service = "http_status:404"
     }
   }
+}
+
+# Store tunnel token in AWS SSM Parameter Store for ECS tasks
+resource "aws_ssm_parameter" "tunnel_token" {
+  count = var.store_token_in_ssm ? 1 : 0
+  
+  name        = "/${var.environment}/cloudflare/tunnel/${var.tunnel_name}/token"
+  description = "Cloudflare tunnel token for ${var.tunnel_name}"
+  type        = "SecureString"
+  value       = cloudflare_zero_trust_tunnel_cloudflared_token.token.token
+  
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.tunnel_name}-token"
+      Environment = var.environment
+      Purpose     = "cloudflare-tunnel"
+    }
+  )
+}
+
+# Create Zero Trust Access Application (optional)
+resource "cloudflare_zero_trust_access_application" "app" {
+  count = var.create_access_application ? 1 : 0
+  
+  zone_id                   = var.cloudflare_zone_id
+  name                      = "${var.tunnel_name}-access"
+  domain                    = var.access_domain
+  session_duration          = var.session_duration
+  auto_redirect_to_identity = true
+  
+  type = "self_hosted"
 }
