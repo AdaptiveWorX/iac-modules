@@ -94,11 +94,11 @@ resource "aws_route_table" "private" {
 
 # Private Routes to NAT Gateway
 resource "aws_route" "private_nat_gateway" {
-  count                  = var.enable_nat_gateway ? length(var.availability_zones) : 0
+  count                  = var.enable_nat_gateway && local.actual_nat_gateway_count > 0 ? length(var.availability_zones) : 0
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
   # Route to the appropriate NAT gateway based on availability
-  nat_gateway_id         = aws_nat_gateway.nat[min(count.index, local.actual_nat_gateway_count - 1)].id
+  nat_gateway_id         = aws_nat_gateway.nat[min(count.index, max(local.actual_nat_gateway_count - 1, 0))].id
 }
 
 # Private Routes for IPv6 (via Egress-only Internet Gateway)
@@ -127,11 +127,11 @@ resource "aws_route_table" "data" {
 
 # Data Routes to NAT Gateway
 resource "aws_route" "data_nat_gateway" {
-  count                  = var.enable_nat_gateway ? length(var.availability_zones) : 0
+  count                  = var.enable_nat_gateway && local.actual_nat_gateway_count > 0 ? length(var.availability_zones) : 0
   route_table_id         = aws_route_table.data[count.index].id
   destination_cidr_block = "0.0.0.0/0"
   # Route to the appropriate NAT gateway based on availability
-  nat_gateway_id         = aws_nat_gateway.nat[min(count.index, local.actual_nat_gateway_count - 1)].id
+  nat_gateway_id         = aws_nat_gateway.nat[min(count.index, max(local.actual_nat_gateway_count - 1, 0))].id
 }
 
 # Data Routes for IPv6 (via Egress-only Internet Gateway)
