@@ -51,7 +51,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "flow_logs" {
 
   # Lifecycle block to handle destroy-time issues
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
+    ignore_changes = [rule]
   }
   
   # Ensure the bucket exists before creating lifecycle configuration
