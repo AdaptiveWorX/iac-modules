@@ -531,6 +531,7 @@ resource "aws_ram_resource_share" "vpc" {
 # Associate subnets with the resource share
 resource "aws_ram_resource_association" "subnets" {
   for_each = length(local.all_accounts) > 0 || var.share_with_org_unit ? merge(
+    { for idx, subnet in aws_subnet.public : "public-${idx}" => subnet.arn },
     { for idx, subnet in aws_subnet.private : "private-${idx}" => subnet.arn },
     { for idx, subnet in aws_subnet.data : "data-${idx}" => subnet.arn }
   ) : {}
