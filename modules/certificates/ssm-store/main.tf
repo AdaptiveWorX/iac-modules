@@ -36,7 +36,7 @@ resource "aws_ssm_parameter" "certificate" {
   description = "Multi-domain wildcard certificate body"
   type        = "String"
   value       = var.certificate_body
-  tier        = "Standard"
+  tier        = "Advanced"  # Advanced tier supports up to 8KB
 
   tags = merge(var.common_tags, {
     Name = "multi-domain-certificate"
@@ -63,7 +63,7 @@ resource "aws_ssm_parameter" "chain" {
   description = "Multi-domain wildcard certificate chain"
   type        = "String"
   value       = var.certificate_chain
-  tier        = "Standard"
+  tier        = "Advanced"  # Advanced tier supports up to 8KB for large certificate chains
 
   tags = merge(var.common_tags, {
     Name = "multi-domain-chain"
