@@ -1,0 +1,94 @@
+name: Notify Module Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  notify:
+    name: Release Notification
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get tag info
+        id: tag_info
+        run: |
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "Tag created: ${GITHUB_REF#refs/tags/}"
+      
+      - name: Create release notes
+        run: |
+          cat << EOF > release_notes.md
+          ## Module Release: ${{ steps.tag_info.outputs.tag }}
+          
+          A new module version has been tagged and is ready for use.
+          
+          ### How to use this version:
+          
+          Update your terragrunt.hcl files to reference this version:
+          \`\`\`hcl
+          source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/MODULE_NAME?ref=${{ steps.tag_info.outputs.tag }}"
+          \`\`\`
+          
+          ### Update commands:
+          
+          \`\`\`bash
+          # Update stage environment
+          cd iac-aws
+          ./scripts/module-helper.sh update stage MODULE_NAME ${{ steps.tag_info.outputs.tag }}
+          
+          # Update production environment
+          ./scripts/module-helper.sh update prod MODULE_NAME ${{ steps.tag_info.outputs.tag }}
+          \`\`\`
+          
+          ### Testing:
+          
+          1. Test in SDLC first (uses main branch)
+          2. Update and test in Stage
+          3. Update Production when validated
+          
+          EOF
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag_info.outputs.tag }}
+          release_name: Release ${{ steps.tag_info.outputs.tag }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+      
+      - name: Create issue reminder
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: 'iac-aws',
+              title: `Module Release ${context.ref.replace('refs/tags/', '')}: Update environments`,
+              body: `A new module version \`${context.ref.replace('refs/tags/', '')}\` has been released in iac-modules.
+              
+              ## Action Required:
+              
+              - [ ] Test the new version in SDLC (if not using main)
+              - [ ] Update Stage environment references
+              - [ ] Update Production environment references
+              
+              Use the module helper script:
+              \`\`\`bash
+              ./scripts/module-helper.sh check  # See current versions
+              ./scripts/module-helper.sh update stage MODULE_NAME ${context.ref.replace('refs/tags/', '')}
+              \`\`\`
+              
+              Close this issue once all environments have been updated or determined not to need the update.`,
+              labels: ['module-update', 'maintenance']
+            }).catch(err => {
+              console.log('Could not create issue in iac-aws repo. This might be due to permissions.');
+              console.log('Manual update reminder: Check iac-aws for module updates needed.');
+            });
