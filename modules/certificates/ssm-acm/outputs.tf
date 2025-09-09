@@ -7,11 +7,13 @@
 output "certificate_arn" {
   description = "ARN of the imported ACM certificate"
   value       = aws_acm_certificate.multi_domain.arn
+  sensitive   = true
 }
 
 output "certificate_id" {
   description = "ID of the imported ACM certificate"
   value       = aws_acm_certificate.multi_domain.id
+  sensitive   = true
 }
 
 output "certificate_domain_name" {
@@ -27,16 +29,19 @@ output "certificate_status" {
 output "cloudfront_certificate_arn" {
   description = "ARN of the CloudFront certificate (if deployed)"
   value       = try(aws_acm_certificate.cloudfront[0].arn, null)
+  sensitive   = true
 }
 
 output "cloudfront_certificate_id" {
   description = "ID of the CloudFront certificate (if deployed)"
   value       = try(aws_acm_certificate.cloudfront[0].id, null)
+  sensitive   = true
 }
 
 output "certificate_expiry" {
   description = "Expiry date of the certificate from SSM"
   value       = data.aws_ssm_parameter.expiry.value
+  sensitive   = true
 }
 
 output "sns_topic_arn" {
@@ -58,4 +63,5 @@ output "certificate_details" {
     expiry      = data.aws_ssm_parameter.expiry.value
     region      = var.aws_region
   }
+  sensitive = true
 }
