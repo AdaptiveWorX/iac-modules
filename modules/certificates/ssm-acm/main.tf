@@ -77,9 +77,12 @@ resource "aws_acm_certificate" "cloudfront" {
 }
 
 # EventBridge rule for ACM certificate expiration notifications
+# Only create in us-east-1 since all regions use the same certificate
 resource "aws_cloudwatch_event_rule" "acm_expiry" {
+  count = var.aws_region == "us-east-1" ? 1 : 0
+  
   name        = "acm-certificate-expiry-${var.environment}"
-  description = "Capture ACM certificate expiry events"
+  description = "Capture ACM certificate expiry events (centralized in us-east-1)"
 
   event_pattern = jsonencode({
     source      = ["aws.acm"]
@@ -93,21 +96,28 @@ resource "aws_cloudwatch_event_rule" "acm_expiry" {
 
   tags = merge(var.common_tags, {
     Name = "acm-expiry-rule"
+    Note = "Centralized monitoring in us-east-1 only"
   })
 }
 
 # SNS topic for certificate expiry alerts
+# Only create in us-east-1 to avoid duplicate notifications
 resource "aws_sns_topic" "certificate_alerts" {
-  name = "certificate-expiry-alerts-${var.aws_region}"
+  count = var.aws_region == "us-east-1" ? 1 : 0
+  
+  name = "certificate-expiry-alerts-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "certificate-expiry-alerts"
+    Note = "Centralized alerts for all regions"
   })
 }
 
 # SNS topic policy to allow EventBridge to publish
 resource "aws_sns_topic_policy" "certificate_alerts" {
-  arn = aws_sns_topic.certificate_alerts.arn
+  count = var.aws_region == "us-east-1" ? 1 : 0
+  
+  arn = aws_sns_topic.certificate_alerts[0].arn
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -118,7 +128,7 @@ resource "aws_sns_topic_policy" "certificate_alerts" {
           Service = "events.amazonaws.com"
         }
         Action   = "SNS:Publish"
-        Resource = aws_sns_topic.certificate_alerts.arn
+        Resource = aws_sns_topic.certificate_alerts[0].arn
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
@@ -131,16 +141,18 @@ resource "aws_sns_topic_policy" "certificate_alerts" {
 
 # EventBridge target to send notifications to SNS
 resource "aws_cloudwatch_event_target" "sns" {
-  rule      = aws_cloudwatch_event_rule.acm_expiry.name
+  count = var.aws_region == "us-east-1" ? 1 : 0
+  
+  rule      = aws_cloudwatch_event_rule.acm_expiry[0].name
   target_id = "SendToSNS"
-  arn       = aws_sns_topic.certificate_alerts.arn
+  arn       = aws_sns_topic.certificate_alerts[0].arn
 }
 
 # Email subscription for alerts
 resource "aws_sns_topic_subscription" "email" {
-  count = var.alert_email != "" ? 1 : 0
+  count = var.aws_region == "us-east-1" && var.alert_email != "" ? 1 : 0
 
-  topic_arn = aws_sns_topic.certificate_alerts.arn
+  topic_arn = aws_sns_topic.certificate_alerts[0].arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
