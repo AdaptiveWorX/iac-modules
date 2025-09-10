@@ -45,13 +45,13 @@ output "certificate_expiry" {
 }
 
 output "sns_topic_arn" {
-  description = "ARN of the SNS topic for certificate expiry alerts"
-  value       = aws_sns_topic.certificate_alerts.arn
+  description = "ARN of the SNS topic for certificate expiry alerts (only in us-east-1)"
+  value       = try(aws_sns_topic.certificate_alerts[0].arn, null)
 }
 
 output "eventbridge_rule_arn" {
-  description = "ARN of the EventBridge rule for ACM expiry notifications"
-  value       = aws_cloudwatch_event_rule.acm_expiry.arn
+  description = "ARN of the EventBridge rule for ACM expiry notifications (only in us-east-1)"
+  value       = try(aws_cloudwatch_event_rule.acm_expiry[0].arn, null)
 }
 
 output "certificate_details" {
