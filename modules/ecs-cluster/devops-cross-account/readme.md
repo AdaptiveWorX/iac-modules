@@ -30,7 +30,7 @@ modules/
 
 This module is designed to work with the SecOps Shared VPC architecture, where:
 
-1. The SecOps account (339712917467) owns all VPCs
+1. The SecOps account (123456789012) owns all VPCs  # Replace with your SecOps account ID
 2. DevOps ECS clusters can be deployed in the SecOps account using either PROD-VPC or SDLC-VPC
 3. VPC sharing allows multiple accounts to use VPCs owned by SecOps:
    - PROD-VPC (10.0.0.0/16) - Used by all production accounts
@@ -159,7 +159,7 @@ resource "aws_iam_role" "prod_rds_access_role" {
       {
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::339712917467:role/devops-cluster-task-role"
+          AWS = "arn:aws:iam::123456789012:role/devops-cluster-task-role"  # Replace with your SecOps account ID
         }
         Action = "sts:AssumeRole"
         Condition = {
@@ -182,7 +182,7 @@ resource "aws_iam_role" "sdlc_rds_access_role" {
       {
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::339712917467:role/devops-cluster-task-role"
+          AWS = "arn:aws:iam::123456789012:role/devops-cluster-task-role"  # Replace with your SecOps account ID
         }
         Action = "sts:AssumeRole"
         Condition = {
@@ -290,4 +290,4 @@ When implementing cross-account operations, consider these network security reco
 
 ## License
 
-MPL-2.0 
+MPL-2.0

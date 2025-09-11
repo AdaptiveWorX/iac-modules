@@ -102,7 +102,7 @@ module "tfc_prod_app_role" {
   workspace           = "*"
   policy_files        = ["prod-app-account.json"]
   enable_cross_account = true
-  secops_account_id   = "339712917467"
+  secops_account_id   = "123456789012"  # Replace with your SecOps account ID
 }
 ```
 
@@ -205,4 +205,4 @@ This module supports Adaptive's AWS infrastructure where:
 3. All roles and policies follow least privilege principle through:
    - Account-specific policy files
    - Limited role assumption capabilities
-   - Explicit resource tagging 
+   - Explicit resource tagging
