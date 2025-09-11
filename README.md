@@ -6,12 +6,29 @@ This repository contains reusable OpenTofu modules for AdaptiveWorX infrastructu
 
 ```
 modules/
-├── vpc/              # VPC and networking components
-├── ecs-cluster/      # ECS cluster configurations
-├── rds/              # RDS database modules
-├── iam-roles/        # IAM roles and policies
-├── network/          # Additional networking components
-└── security/         # Security-related modules
+├── vpc/                    # VPC and networking components
+│   ├── foundation/         # Base VPC, subnets, gateways
+│   ├── security/          # NACLs, security groups
+│   └── operations/        # Flow logs, monitoring
+├── certificates/          # Certificate management
+│   ├── ssm-acm/          # SSM to ACM import
+│   └── ssm-store/        # SSM parameter storage
+├── cloudflare/           # Cloudflare integrations
+│   ├── token-management/
+│   ├── zero-trust/
+│   └── zero-trust-deployment/
+├── ecs-cluster/          # ECS cluster configurations
+│   ├── cf-tunnel-cluster/
+│   └── devops-cross-account/
+├── iam-roles/            # IAM roles and policies
+│   ├── cf-tunnel-role/
+│   ├── cross-account-rds-access/
+│   ├── oidc-provider/
+│   └── tfc-roles/
+├── ram-tagging/          # Resource Access Manager tagging
+├── ssm/                  # Systems Manager configurations
+│   └── cf-tunnel-token/
+└── flow-logs-analysis/   # VPC flow logs analysis
 ```
 
 ## Module Versioning
@@ -27,7 +44,15 @@ Reference modules in your Terragrunt configuration:
 
 ```hcl
 terraform {
-  source = "git::git@github.com:AdaptiveWorX/iac-modules.git//modules/vpc?ref=v1.0.0"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foundation?ref=main"
+}
+```
+
+Or for a specific version tag:
+
+```hcl
+terraform {
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foundation?ref=v1.0.0"
 }
 ```
 
