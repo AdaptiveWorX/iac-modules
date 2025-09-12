@@ -4,7 +4,7 @@ This module applies Name tags to shared VPC resources in recipient AWS accounts.
 
 ## Purpose
 
-When a VPC is shared from one AWS account (e.g., worx-secops) to another account (e.g., worx-sdlc) using AWS RAM:
+When a VPC is shared from one AWS account (e.g., worx-secops) to another account (e.g., worx-dev) using AWS RAM:
 - The shared resources (VPC, subnets, route tables, etc.) appear in the recipient account
 - However, the tags from the owner account are NOT visible in the recipient account
 - This makes it difficult to identify resources by their descriptive names
@@ -20,7 +20,7 @@ This module solves this problem by:
 ```
 ┌─────────────────────┐         ┌─────────────────────┐
 │   Owner Account     │         │  Recipient Account  │
-│   (worx-secops)     │         │   (worx-sdlc)       │
+│   (worx-secops)     │         │   (worx-dev)       │
 ├─────────────────────┤         ├─────────────────────┤
 │                     │   RAM   │                     │
 │  VPC Resources      │ ──────> │  Shared Resources   │
@@ -44,9 +44,9 @@ This module solves this problem by:
 module "ram_tagging" {
   source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/ram-tagging?ref=v1.0.0"
 
-  environment = "sdlc"
+  environment = "dev"
   region      = "us-east-1"
-  vpc_name    = "sdlc-vpc"
+  vpc_name    = "dev-vpc"
 
   tags = {
     ManagedBy = "terraform"
@@ -64,8 +64,8 @@ The module automatically:
 ### Terragrunt Configuration Example
 
 See the deployment configurations in:
-- `iac-aws/worx-sdlc/ram-tagging/terragrunt.hcl`
-- `iac-aws/worx-stage/ram-tagging/terragrunt.hcl`
+- `iac-aws/worx-dev/ram-tagging/terragrunt.hcl`
+- `iac-aws/worx-staging/ram-tagging/terragrunt.hcl`
 - `iac-aws/worx-prod/ram-tagging/terragrunt.hcl`
 
 ## Resources Tagged

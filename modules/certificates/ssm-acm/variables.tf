@@ -5,11 +5,11 @@
 # Purpose: Variables for importing certificates from SSM to ACM
 
 variable "environment" {
-  description = "Environment name (sdlc, stage, prod)"
+  description = "Environment name (dev, staging, prod)"
   type        = string
   validation {
-    condition     = contains(["sdlc", "stage", "prod"], var.environment)
-    error_message = "Environment must be sdlc, stage, or prod."
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment must be dev, staging, or prod."
   }
 }
 

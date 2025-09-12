@@ -39,7 +39,7 @@ Connectivity rules (managed by vpc-connectivity module):
 module "vpc_security" {
   source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-security?ref=v1.0.0"
 
-  environment        = "sdlc"
+  environment        = "dev"
   vpc_cidr          = "10.193.0.0/16"  # Different from foundation
   region_code       = "use1"
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
@@ -60,7 +60,7 @@ module "vpc_security" {
   flow_logs_destination = "s3"  # or "cloud-watch-logs"
 
   tags = {
-    Environment = "sdlc"
+    Environment = "dev"
     Layer       = "security"     # Critical for connectivity
     Region      = "us-east-1"    # Used by vpc-connectivity
     ManagedBy   = "Terraform"
@@ -106,7 +106,7 @@ Pre-configured interface endpoints for AWS security services:
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|----------
 | vpc_cidr | CIDR block for the VPC | string | - | yes |
-| environment | Environment name (sdlc, stage, prod) | string | - | yes |
+| environment | Environment name (dev, staging, prod) | string | - | yes |
 | availability_zones | List of availability zones | list(string) | - | yes |
 | region_code | AWS region code | string | - | yes |
 | subnet_count | Number of subnets per tier | number | 2 | no |

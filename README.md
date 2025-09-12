@@ -261,7 +261,7 @@ source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foun
 ### Version Promotion
 
 For environments using these modules:
-1. Test new versions in development (SDLC)
+1. Test new versions in development (DEV)
 2. Promote to staging after validation
 3. Deploy to production after staging verification
 

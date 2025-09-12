@@ -63,19 +63,19 @@ graph TD
 module "cloudflare_zt" {
   source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/cloudflare/zero-trust-deployment?ref=v1.0.0"
 
-  prefix      = "sdlc-aws"
-  environment = "sdlc"
+  prefix      = "dev-aws"
+  environment = "dev"
   aws_region  = "us-east-1"
 
   # Cloudflare configuration
   cloudflare_account_id = var.cloudflare_account_id
   cloudflare_api_token  = var.cloudflare_api_token
-  tunnel_name          = "sdlc-aws-tunnel"
+  tunnel_name          = "dev-aws-tunnel"
   
   tunnel_routes = [
     {
       network = "10.192.0.0/10"
-      comment = "SDLC VPC access"
+      comment = "DEV VPC access"
     }
   ]
 
@@ -96,7 +96,7 @@ module "cloudflare_zt" {
   max_count          = 4
 
   tags = {
-    Environment = "sdlc"
+    Environment = "dev"
     ManagedBy   = "terraform"
   }
 }
@@ -124,7 +124,7 @@ module "cloudflare_zt" {
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | prefix | Prefix for resource names | `string` | n/a | yes |
-| environment | Environment name (sdlc, stage, prod) | `string` | n/a | yes |
+| environment | Environment name (dev, staging, prod) | `string` | n/a | yes |
 | aws_region | AWS region | `string` | n/a | yes |
 | cloudflare_account_id | Cloudflare account ID | `string` | n/a | yes |
 | cloudflare_api_token | Cloudflare API token | `string` | n/a | yes |
@@ -206,11 +206,11 @@ The module creates CloudWatch dashboards and alarms for:
 ```bash
 # Check ECS service status
 aws ecs describe-services \
-  --cluster sdlc-aws-us-east-1-cf-tunnel-cluster \
-  --services sdlc-aws-us-east-1-cf-tunnel
+  --cluster dev-aws-us-east-1-cf-tunnel-cluster \
+  --services dev-aws-us-east-1-cf-tunnel
 
 # View recent logs
-aws logs tail /ecs/sdlc-aws-us-east-1-cf-tunnel --follow
+aws logs tail /ecs/dev-aws-us-east-1-cf-tunnel --follow
 
 # Get tunnel status
 cloudflared tunnel info <tunnel-id>

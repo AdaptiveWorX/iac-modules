@@ -18,11 +18,11 @@ variable "tunnel_name" {
 }
 
 variable "environment" {
-  description = "Environment name (sdlc, stage, prod)"
+  description = "Environment name (dev, staging, prod)"
   type        = string
   validation {
-    condition     = contains(["sdlc", "stage", "prod"], var.environment)
-    error_message = "Environment must be one of: sdlc, stage, prod"
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment must be one of: dev, staging, prod"
   }
 }
 

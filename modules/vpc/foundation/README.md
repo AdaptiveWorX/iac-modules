@@ -37,7 +37,7 @@ Connectivity between layers is managed by the vpc-connectivity module:
 module "vpc_foundation" {
   source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc-foundation?ref=v1.0.0"
 
-  environment        = "sdlc"
+  environment        = "dev"
   vpc_cidr          = "10.192.0.0/16"
   region_code       = "use1"
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
@@ -58,7 +58,7 @@ module "vpc_foundation" {
   }
 
   tags = {
-    Environment = "sdlc"
+    Environment = "dev"
     Layer       = "foundation"  # Important for connectivity discovery
     Region      = "us-east-1"   # Used by vpc-connectivity module
     ManagedBy   = "Terraform"
@@ -96,7 +96,7 @@ The module automatically tags the VPC with layer information, enabling:
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|----------|
 | vpc_cidr | CIDR block for the VPC | string | - | yes |
-| environment | Environment name (sdlc, stage, prod) | string | - | yes |
+| environment | Environment name (dev, staging, prod) | string | - | yes |
 | availability_zones | List of availability zones | list(string) | - | yes |
 | region_code | AWS region code | string | - | yes |
 | subnet_count | Number of subnets per tier (should match number of AZs) | number | 2 | no |
@@ -125,7 +125,7 @@ When deploying across multiple regions:
 2. VPCs are tagged with Environment, Layer, and Region
 3. The vpc-connectivity module discovers and connects VPCs based on these tags
 4. Connectivity strategy varies by environment:
-   - SDLC/Stage: VPC Peering (simpler, cost-effective)
+   - DEV/Stage: VPC Peering (simpler, cost-effective)
    - Production: Transit Gateway (scalable, hub-and-spoke)
 
 ## Requirements

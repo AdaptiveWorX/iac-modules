@@ -338,13 +338,13 @@ This repository uses automated semantic versioning with [semantic-release](https
 For environments using these modules with [iac-aws](https://github.com/AdaptiveWorX/iac-aws):
 
 ```bash
-# Test in SDLC (uses local modules)
-cd iac-aws/worx-secops/vpc/sdlc/foundation
+# Test in DEV (uses local modules)
+cd iac-aws/worx-secops/vpc/dev/foundation
 terragrunt apply
 
 # Promote to Stage
 cd iac-aws
-./scripts/promote-version.sh stage vpc_foundation
+./scripts/promote-version.sh staging vpc_foundation
 
 # Promote to Production
 ./scripts/promote-version.sh prod vpc_foundation

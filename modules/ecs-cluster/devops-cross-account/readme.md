@@ -31,10 +31,10 @@ modules/
 This module is designed to work with the SecOps Shared VPC architecture, where:
 
 1. The SecOps account (123456789012) owns all VPCs  # Replace with your SecOps account ID
-2. DevOps ECS clusters can be deployed in the SecOps account using either PROD-VPC or SDLC-VPC
+2. DevOps ECS clusters can be deployed in the SecOps account using either PROD-VPC or DEV-VPC
 3. VPC sharing allows multiple accounts to use VPCs owned by SecOps:
    - PROD-VPC (10.0.0.0/16) - Used by all production accounts
-   - SDLC-VPC (10.1.0.0/16) - Used by all non-production accounts
+   - DEV-VPC (10.1.0.0/16) - Used by all non-production accounts
 
 The module enables ECS tasks to operate across these shared VPCs through proper IAM roles and network routing.
 
@@ -59,12 +59,12 @@ module "secops_ecs_cluster" {
       cidr_blocks = ["10.0.128.0/20"]  # PROD RDS CIDR block
       description = "Allow MSSQL to PROD RDS subnets"
     },
-    sdlc_rds_mssql = {
+    dev_rds_mssql = {
       from_port   = 1433
       to_port     = 1433
       protocol    = "tcp"
-      cidr_blocks = ["10.1.128.0/20"]  # SDLC RDS CIDR block
-      description = "Allow MSSQL to SDLC RDS subnets"
+      cidr_blocks = ["10.1.128.0/20"]  # DEV RDS CIDR block
+      description = "Allow MSSQL to DEV RDS subnets"
     }
   }
 
@@ -78,7 +78,7 @@ module "secops_ecs_cluster" {
           Action   = "sts:AssumeRole"
           Resource = [
             "arn:aws:iam::762541305735:role/prod-rds-access-role",
-            "arn:aws:iam::135477718604:role/sdlc-rds-access-role"
+            "arn:aws:iam::135477718604:role/dev-rds-access-role"
           ]
         }
       ]
@@ -139,8 +139,8 @@ The DevOps ECS cluster in the SecOps account is designed to perform operations a
    - Backup database operations
    - Access to PROD S3 buckets for backup storage
 
-2. **SDLC-APP Account (135477718604)**:
-   - Access to SDLC MSSQL RDS instances
+2. **DEV-APP Account (135477718604)**:
+   - Access to DEV MSSQL RDS instances
    - Restore database operations
    - Access to ECR repositories for container images
 
@@ -172,9 +172,9 @@ resource "aws_iam_role" "prod_rds_access_role" {
   })
 }
 
-# In SDLC-APP account (135477718604)
-resource "aws_iam_role" "sdlc_rds_access_role" {
-  name = "sdlc-rds-access-role"
+# In DEV-APP account (135477718604)
+resource "aws_iam_role" "dev_rds_access_role" {
+  name = "dev-rds-access-role"
   
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -217,8 +217,8 @@ resource "aws_ecs_task_definition" "rds_backup_task" {
         value = "arn:aws:iam::762541305735:role/prod-rds-access-role"
       },
       {
-        name  = "SDLC_ROLE_ARN",
-        value = "arn:aws:iam::135477718604:role/sdlc-rds-access-role"
+        name  = "DEV_ROLE_ARN",
+        value = "arn:aws:iam::135477718604:role/dev-rds-access-role"
       },
       {
         name  = "EXTERNAL_ID",

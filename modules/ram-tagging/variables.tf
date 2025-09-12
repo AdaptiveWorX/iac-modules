@@ -4,7 +4,7 @@
 # RAM Tagging Module - Variables
 
 variable "environment" {
-  description = "Environment name (e.g., sdlc, stage, prod)"
+  description = "Environment name (e.g., dev, staging, prod)"
   type        = string
 }
 
