@@ -1,6 +1,8 @@
-# AWS OIDC Provider Module
+# Terraform Cloud OIDC Provider Module
 
-This module creates an OpenID Connect (OIDC) identity provider in AWS IAM for Terraform Cloud workload identity federation. It establishes the trust relationship between AWS and Terraform Cloud, enabling secure authentication without static credentials.
+This module creates an OpenID Connect (OIDC) identity provider in AWS IAM specifically for Terraform Cloud workload identity federation. It establishes the trust relationship between AWS and Terraform Cloud, enabling secure authentication without static credentials.
+
+**Note**: This module is for Terraform Cloud authentication only. For GitHub Actions OIDC, see the inline configuration in `iac-worx/aws/oidc/aws-github-actions/`.
 
 ## Features
 
@@ -14,7 +16,7 @@ This module creates an OpenID Connect (OIDC) identity provider in AWS IAM for Te
 
 ```hcl
 module "tfc_oidc_provider" {
-  source = "../../modules/iam/oidc-provider"
+  source = "../../modules/iam-roles/tfc-oidc-provider"
 
   oidc_hostname = "app.terraform.io"
   oidc_audience = "aws.workload.identity"
@@ -92,4 +94,4 @@ This module is part of Adaptive's AWS infrastructure where:
 ## Related Modules
 
 - [TFC Roles](../tfc-roles/README.md) - Creates IAM roles that trust this OIDC provider
-- [TFC Workspaces](../../tfc/workspace/README.md) - Creates workspaces that use these OIDC providers 
+- [TFC Workspaces](../../tfc/workspace/README.md) - Creates workspaces that use these OIDC providers
