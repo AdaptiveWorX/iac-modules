@@ -9,6 +9,7 @@ Welcome to the AdaptiveWorX Infrastructure as Code (IaC) modules repository! Thi
 - OpenTofu 1.6+ or Terraform 1.5+
 - AWS CLI configured with appropriate credentials
 - Git 2.0+
+- Node.js 14+ (for contributing and semantic versioning)
 - (Optional) Terragrunt 0.50+ for enhanced workflow
 
 ### Basic Usage
@@ -287,6 +288,67 @@ module "zero_trust" {
 **Authentication issues:**
 - This is a public repository - no authentication needed!
 - If cloning fails, check your internet connection
+
+## 🔄 Contributing & Versioning
+
+### Semantic Versioning
+
+This repository uses automated semantic versioning with [semantic-release](https://semantic-release.gitbook.io/):
+
+- **Conventional commits** trigger automatic versioning
+- **GitHub releases** created automatically
+- **CHANGELOG.md** updated with each release
+- **Git tags** created for each version
+
+### Contributing Workflow
+
+1. **Fork and Clone**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/iac-modules.git
+   cd iac-modules
+   npm install  # Install semantic-release dependencies
+   ```
+
+2. **Use Conventional Commits**
+   ```bash
+   # Features (minor version bump)
+   git commit -m "feat: Add VPC endpoint support"
+   
+   # Fixes (patch version bump)
+   git commit -m "fix: Correct subnet CIDR calculation"
+   
+   # Breaking changes (major version bump)
+   git commit -m "feat!: Restructure module inputs
+   
+   BREAKING CHANGE: vpc_cidr is now vpc_cidr_block"
+   
+   # No version bump
+   git commit -m "docs: Update README"
+   git commit -m "style: Format files"
+   git commit -m "test: Add tests"
+   ```
+
+3. **Create Pull Request**
+   - CI/CD validates modules
+   - Security scanning runs
+   - Merge triggers automatic versioning
+
+### Version Promotion
+
+For environments using these modules with [iac-aws](https://github.com/AdaptiveWorX/iac-aws):
+
+```bash
+# Test in SDLC (uses local modules)
+cd iac-aws/worx-secops/vpc/sdlc/foundation
+terragrunt apply
+
+# Promote to Stage
+cd iac-aws
+./scripts/promote-version.sh stage vpc_foundation
+
+# Promote to Production
+./scripts/promote-version.sh prod vpc_foundation
+```
 
 ## 🎯 Next Steps
 

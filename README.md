@@ -17,7 +17,7 @@ Welcome to the AdaptiveWorX Infrastructure as Code (IaC) modules repository! Thi
 
 ```hcl
 module "vpc" {
-  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foundation?ref=main"
+  source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foundation?ref=v1.0.0"
   
   environment        = "production"
   vpc_cidr          = "10.0.0.0/16"
@@ -29,14 +29,27 @@ module "vpc" {
 }
 ```
 
+> **Note**: Always use versioned releases (e.g., `?ref=v1.0.0`) in production. See [Versioning](#-versioning) for details.
+
 ## 📦 Available Modules
 
-### Core Infrastructure
+### Network Infrastructure
 | Module | Description | Status |
 |--------|-------------|--------|
 | `vpc/foundation` | Base VPC with subnets, route tables, and gateways | Production Ready |
 | `vpc/security` | Security groups, NACLs, and VPC flow logs | Production Ready |
 | `vpc/operations` | Monitoring, bastion hosts, and VPC endpoints | Production Ready |
+
+### Compute Services
+| Module | Description | Status |
+|--------|-------------|--------|
+| `lambda/data-processor` | Data processing Lambda functions | In Development |
+| `ecs/web-api` | Web API service on ECS Fargate | In Development |
+
+### Database Services
+| Module | Description | Status |
+|--------|-------------|--------|
+| `rds/postgresql` | PostgreSQL RDS instances with read replicas | In Development |
 
 ### Security & Compliance
 | Module | Description | Status |
@@ -104,7 +117,9 @@ Foundation Layer → Security Layer → Operations Layer
 
 ## 🛠️ Module Development
 
-Each module follows a standard structure:
+### Standard Structure
+
+Each module follows a consistent structure:
 
 ```
 modules/category/module-name/
@@ -116,6 +131,48 @@ modules/category/module-name/
 ├── examples/          # Usage examples
 └── tests/            # Integration tests
 ```
+
+### Development Workflow
+
+1. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/new-module
+   ```
+
+2. **Develop Module**
+   - Follow the standard structure
+   - Include comprehensive documentation
+   - Add usage examples
+
+3. **Commit with Conventional Messages**
+   ```bash
+   git commit -m "feat: Add new RDS module"
+   git commit -m "fix: Resolve security group issue"
+   git commit -m "docs: Update VPC module README"
+   ```
+
+4. **Create Pull Request**
+   - CI/CD runs validation
+   - Security scanning (tfsec, checkov)
+   - Documentation checks
+
+5. **Automatic Versioning**
+   - Merge to main triggers semantic-release
+   - Version created based on commit messages
+   - Changelog automatically updated
+
+### Commit Convention
+
+| Type | Version Bump | Description |
+|------|--------------|-------------|
+| `feat` | Minor (1.X.0) | New feature |
+| `fix` | Patch (1.0.X) | Bug fix |
+| `feat!` | Major (X.0.0) | Breaking change |
+| `docs` | No bump | Documentation only |
+| `style` | No bump | Code style changes |
+| `refactor` | No bump | Code refactoring |
+| `test` | No bump | Test changes |
+| `chore` | No bump | Build/tool changes |
 
 ## 🤝 Contributing
 
@@ -171,13 +228,44 @@ More examples available in each module's `examples/` directory.
 
 ## 📈 Versioning
 
-We use [Semantic Versioning](https://semver.org/):
+We use [Semantic Versioning](https://semver.org/) with automated releases:
 
-- **MAJOR** version for incompatible changes
+- **MAJOR** version for incompatible changes (breaking changes)
 - **MINOR** version for backwards-compatible features
 - **PATCH** version for backwards-compatible fixes
 
-Always pin to specific versions in production!
+### Automated Releases
+
+This repository uses [semantic-release](https://semantic-release.gitbook.io/) for automated version management:
+
+1. **Conventional commits** trigger automatic versioning
+2. **GitHub releases** created automatically
+3. **Changelog** updated with each release
+4. **Git tags** created for each version
+
+### Using Module Versions
+
+```hcl
+# Development - use main branch
+source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foundation?ref=main"
+
+# Staging - use latest stable version
+source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foundation?ref=v1.2.0"
+
+# Production - pin to specific tested version
+source = "git::https://github.com/AdaptiveWorX/iac-modules.git//modules/vpc/foundation?ref=v1.0.5"
+```
+
+**Always pin to specific versions in production!**
+
+### Version Promotion
+
+For environments using these modules:
+1. Test new versions in development (SDLC)
+2. Promote to staging after validation
+3. Deploy to production after staging verification
+
+See the [iac-aws repository](https://github.com/AdaptiveWorX/iac-aws) for environment-specific version management.
 
 ## 📜 License
 

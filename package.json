@@ -1,0 +1,26 @@
+{
+  "name": "iac-modules",
+  "version": "1.0.0",
+  "description": "Infrastructure as Code modules for AdaptiveWorX",
+  "main": "index.js",
+  "scripts": {
+    "release": "semantic-release"
+  },
+  "devDependencies": {
+    "semantic-release": "^23.0.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/changelog": "^6.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AdaptiveWorX/iac-modules.git"
+  },
+  "keywords": [
+    "terraform",
+    "opentofu",
+    "infrastructure",
+    "iac"
+  ],
+  "author": "AdaptiveWorX",
+  "license": "MIT"
+}
