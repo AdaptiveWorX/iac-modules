@@ -1,78 +1,224 @@
 # Copyright (c) Adaptive Technology
 # SPDX-License-Identifier: Apache-2.0
 
-# Create the Cloudflare Zero Trust Tunnel
-resource "random_password" "tunnel_secret" {
-  length = 64
-  special = true
-}
-
-resource "cloudflare_zero_trust_tunnel_cloudflared" "tunnel" {
-  account_id = var.cloudflare_account_id
-  name       = var.tunnel_name
-  secret     = base64encode(random_password.tunnel_secret.result)
-}
-
-# Create tunnel token for cloudflared authentication
-resource "cloudflare_zero_trust_tunnel_cloudflared_token" "token" {
-  account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
-}
-
-# Create Cloudflare Tunnel Routes for VPC CIDR blocks
-resource "cloudflare_zero_trust_tunnel_route" "vpc_routes" {
-  for_each   = { for idx, route in var.vpc_routes : idx => route }
-  account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
-  network    = each.value.cidr
-  comment    = each.value.description
-}
-
-# Configure tunnel with WARP routing enabled
-resource "cloudflare_zero_trust_tunnel_cloudflared_config" "config" {
-  account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
-  
-  config {
-    warp_routing {
-      enabled = true
+terraform {
+  required_version = ">= 1.10.0"
+  required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
     }
-    
-    # Default catch-all rule for WARP traffic
-    ingress_rule {
-      service = "http_status:404"
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"   # Latest 3.x version as of Sep 2025
     }
   }
 }
 
-# Store tunnel token in AWS SSM Parameter Store for ECS tasks
-resource "aws_ssm_parameter" "tunnel_token" {
-  count = var.store_token_in_ssm ? 1 : 0
+# Data sources
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+# Local variables for dynamic configuration
+locals {
+  tunnel_name = "${var.name_prefix}-${var.environment}-tunnel"
   
-  name        = "/${var.environment}/cloudflare/tunnel/${var.tunnel_name}/token"
-  description = "Cloudflare tunnel token for ${var.tunnel_name}"
-  type        = "SecureString"
-  value       = cloudflare_zero_trust_tunnel_cloudflared_token.token.token
+  # Parse tunnel routes from input
+  tunnel_routes = [
+    for route in var.vpc_routes : {
+      network = route.cidr
+      comment = "${route.description} - ${route.region}"
+      enabled = route.enabled
+    }
+  ]
   
-  tags = merge(
+  # DNS configuration
+  dns_subdomain = var.environment == "prod" ? "tunnel" : "tunnel-${var.environment}"
+  dns_fqdn      = "${local.dns_subdomain}.${var.dns_zone}"
+  
+  # Tags for resources
+  common_tags = merge(
     var.tags,
     {
-      Name        = "${var.tunnel_name}-token"
       Environment = var.environment
-      Purpose     = "cloudflare-tunnel"
+      ManagedBy   = "Terraform"
+      Purpose     = "CloudflareZeroTrust"
+      Module      = "zero-trust-simplified"
     }
   )
 }
 
-# Create Zero Trust Access Application (optional)
-resource "cloudflare_zero_trust_access_application" "app" {
+# Create Cloudflare tunnel
+resource "cloudflare_tunnel" "main" {
+  account_id = var.cloudflare_account_id
+  name       = local.tunnel_name
+  secret     = base64encode(random_password.tunnel_secret.result)
+}
+
+# Generate random secret for tunnel
+resource "random_password" "tunnel_secret" {
+  length  = 32
+  special = false
+}
+
+# Create tunnel routes for VPC access
+resource "cloudflare_tunnel_route" "vpc_routes" {
+  for_each = {
+    for idx, route in local.tunnel_routes : 
+    "${var.environment}-${idx}" => route if route.enabled
+  }
+  
+  account_id = var.cloudflare_account_id
+  tunnel_id  = cloudflare_tunnel.main.id
+  network    = each.value.network
+  comment    = each.value.comment
+}
+
+# DNS record for tunnel
+resource "cloudflare_dns_record" "tunnel" {
+  count = var.create_dns_record ? 1 : 0
+  
+  zone_id = var.cloudflare_zone_id
+  name    = local.dns_subdomain
+  content = "${cloudflare_tunnel.main.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1  # Automatic TTL when proxied
+  proxied = true
+  comment = "Cloudflare Zero Trust tunnel for ${var.environment} environment"
+}
+
+# Store tunnel token in AWS SSM Parameter Store
+resource "aws_ssm_parameter" "tunnel_token" {
+  name  = "/${var.environment}/cloudflare/tunnel/token"
+  type  = "SecureString"
+  value = cloudflare_tunnel.main.tunnel_token
+  
+  description = "Cloudflare tunnel token for ${var.environment} environment"
+  
+  tags = local.common_tags
+}
+
+# Store tunnel ID for reference
+resource "aws_ssm_parameter" "tunnel_id" {
+  name  = "/${var.environment}/cloudflare/tunnel/id"
+  type  = "String"
+  value = cloudflare_tunnel.main.id
+  
+  description = "Cloudflare tunnel ID for ${var.environment} environment"
+  
+  tags = local.common_tags
+}
+
+# Store tunnel configuration
+resource "aws_ssm_parameter" "tunnel_config" {
+  name  = "/${var.environment}/cloudflare/tunnel/config"
+  type  = "String"
+  value = jsonencode({
+    tunnel_id    = cloudflare_tunnel.main.id
+    tunnel_name  = local.tunnel_name
+    account_id   = var.cloudflare_account_id
+    dns_fqdn     = local.dns_fqdn
+    environment  = var.environment
+    routes       = local.tunnel_routes
+    created_at   = timestamp()
+  })
+  
+  description = "Cloudflare tunnel configuration for ${var.environment} environment"
+  
+  tags = local.common_tags
+}
+
+# Create Access Application (if enabled)
+resource "cloudflare_access_application" "main" {
   count = var.create_access_application ? 1 : 0
   
   zone_id                   = var.cloudflare_zone_id
-  name                      = "${var.tunnel_name}-access"
-  domain                    = var.access_domain
+  name                      = "${var.environment} Tunnel Access"
+  domain                    = var.access_domain != "" ? var.access_domain : local.dns_fqdn
+  type                      = "self_hosted"
   session_duration          = var.session_duration
   auto_redirect_to_identity = true
   
-  type = "self_hosted"
+  # App launcher settings
+  app_launcher_visible = true
+}
+
+# Configure tunnel with WARP routing (simplified - config happens in cloudflared)
+# The actual tunnel configuration is handled by the cloudflared instance
+# using the token stored in SSM Parameter Store
+
+# Create CloudWatch log group for tunnel metrics
+resource "aws_cloudwatch_log_group" "tunnel" {
+  name              = "/cloudflare/tunnel/${var.environment}"
+  retention_in_days = var.log_retention_days
+  
+  tags = local.common_tags
+}
+
+# Create CloudWatch dashboard for monitoring
+resource "aws_cloudwatch_dashboard" "tunnel" {
+  count = var.create_dashboard ? 1 : 0
+  
+  dashboard_name = "${var.environment}-cloudflare-tunnel"
+  
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type = "metric"
+        properties = {
+          metrics = [
+            ["CloudflareTunnel", "TunnelStatus", { stat = "Average", label = "Tunnel Status" }],
+            [".", "ActiveConnections", { stat = "Sum", label = "Active Connections" }],
+            [".", "TunnelRegistered", { stat = "Average", label = "Registration Status" }]
+          ]
+          period = 300
+          stat   = "Average"
+          region = data.aws_region.current.name
+          title  = "Tunnel Health Metrics"
+        }
+      },
+      {
+        type = "metric"
+        properties = {
+          metrics = [
+            ["AWS/EC2", "CPUUtilization", { stat = "Average", label = "CPU Usage" }],
+            [".", "NetworkIn", { stat = "Sum", label = "Network In" }],
+            [".", "NetworkOut", { stat = "Sum", label = "Network Out" }]
+          ]
+          period = 300
+          stat   = "Average"
+          region = data.aws_region.current.name
+          title  = "EC2 Instance Metrics"
+        }
+      }
+    ]
+  })
+}
+
+# Create SNS topic for alerts
+resource "aws_sns_topic" "tunnel_alerts" {
+  count = var.create_alerts ? 1 : 0
+  
+  name = "${var.environment}-cloudflare-tunnel-alerts"
+  
+  tags = local.common_tags
+}
+
+# Create SNS topic subscription
+resource "aws_sns_topic_subscription" "tunnel_alerts_email" {
+  count = var.create_alerts && length(var.alert_emails) > 0 ? length(var.alert_emails) : 0
+  
+  topic_arn = aws_sns_topic.tunnel_alerts[0].arn
+  protocol  = "email"
+  endpoint  = var.alert_emails[count.index]
+}
+
+# Output tunnel webhook URL for health checks
+locals {
+  webhook_url = var.create_webhook ? "https://${local.dns_fqdn}/health" : null
 }
