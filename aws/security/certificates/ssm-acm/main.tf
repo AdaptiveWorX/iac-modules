@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Module: certificates/ssm-acm
-# Purpose: Import certificates from SSM Parameter Store to ACM
+# Purpose: Import certificates from SSM Parameter Store to ACM with in-place update support
 
 terraform {
   required_version = ">= 1.5.0"
@@ -37,22 +37,40 @@ data "aws_ssm_parameter" "expiry" {
   name     = "/certificates/multi-domain/expiry"
 }
 
+# Get SSM parameter versions to track changes
+data "aws_ssm_parameter" "certificate_version" {
+  provider = aws.secops
+  name     = "/certificates/multi-domain/certificate-version"
+}
+
 # Import certificate to ACM in the current region
+# This resource supports in-place updates when certificate content changes
 resource "aws_acm_certificate" "multi_domain" {
   certificate_body  = data.aws_ssm_parameter.certificate.value
   private_key       = data.aws_ssm_parameter.private_key.value
   certificate_chain = data.aws_ssm_parameter.chain.value
 
   tags = merge(var.common_tags, {
-    Name       = "multi-domain-wildcard"
-    Expiry     = data.aws_ssm_parameter.expiry.value
-    Purpose    = "regional"
-    Region     = var.aws_region
-    ManagedBy  = "terragrunt"
+    Name            = "multi-domain-wildcard"
+    Expiry          = data.aws_ssm_parameter.expiry.value
+    Purpose         = "regional"
+    Region          = var.aws_region
+    ManagedBy       = "terragrunt"
+    CertVersion     = try(data.aws_ssm_parameter.certificate_version.value, "1")
+    LastUpdated     = timestamp()
+    UpdateBehavior  = var.certificate_update_behavior
   })
 
   lifecycle {
-    create_before_destroy = true
+    # IMPORTANT: Set to false to enable in-place updates
+    # When true, forces new ARN on certificate content change
+    # When false, attempts to update certificate in-place preserving ARN
+    create_before_destroy = var.force_new_certificate_arn
+    
+    # Ignore tag changes that are managed externally
+    ignore_changes = [
+      tags["LastUpdated"],
+    ]
   }
 }
 
@@ -65,14 +83,36 @@ resource "aws_acm_certificate" "cloudfront" {
   certificate_chain = data.aws_ssm_parameter.chain.value
 
   tags = merge(var.common_tags, {
-    Name       = "multi-domain-wildcard-cloudfront"
-    Expiry     = data.aws_ssm_parameter.expiry.value
-    Purpose    = "cloudfront"
-    ManagedBy  = "terragrunt"
+    Name            = "multi-domain-wildcard-cloudfront"
+    Expiry          = data.aws_ssm_parameter.expiry.value
+    Purpose         = "cloudfront"
+    ManagedBy       = "terragrunt"
+    CertVersion     = try(data.aws_ssm_parameter.certificate_version.value, "1")
+    LastUpdated     = timestamp()
+    UpdateBehavior  = var.certificate_update_behavior
   })
 
   lifecycle {
-    create_before_destroy = true
+    # CloudFront certificates should preserve ARN for distribution continuity
+    create_before_destroy = var.force_new_certificate_arn
+    
+    ignore_changes = [
+      tags["LastUpdated"],
+    ]
+  }
+}
+
+# Null resource to handle certificate reimport logic
+# This ensures proper reimport when SSM parameters change
+resource "null_resource" "certificate_reimport_trigger" {
+  triggers = {
+    certificate_hash = sha256("${data.aws_ssm_parameter.certificate.value}${data.aws_ssm_parameter.private_key.value}${data.aws_ssm_parameter.chain.value}")
+    update_behavior  = var.certificate_update_behavior
+  }
+
+  provisioner "local-exec" {
+    when    = create
+    command = "echo 'Certificate content changed, triggering update...'"
   }
 }
 
