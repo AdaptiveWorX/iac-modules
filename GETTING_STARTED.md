@@ -225,7 +225,7 @@ cd iac-modules
 2. Test a module locally:
 ```hcl
 module "test_vpc" {
-  source = "../path/to/iac-modules/modules/vpc/foundation"
+  source = "../path/to/iac-modules/aws/vpc/foundation"
   # ... configuration
 }
 ```
