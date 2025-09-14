@@ -85,7 +85,7 @@ resource "aws_ssm_parameter" "expiry" {
 
 # Cross-account IAM role for certificate access
 resource "aws_iam_role" "certificate_reader" {
-  name = "certificate-reader"
+  name = "worx-secops-certificate-reader"
   
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -101,7 +101,7 @@ resource "aws_iam_role" "certificate_reader" {
   })
 
   tags = merge(var.common_tags, {
-    Name = "certificate-reader-role"
+    Name = "worx-secops-certificate-reader"
   })
 }
 
