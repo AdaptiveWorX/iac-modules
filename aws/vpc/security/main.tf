@@ -19,6 +19,8 @@ terraform {
 # DATA SOURCES - Reference Foundation Layer
 # ============================================================================
 
+data "aws_region" "current" {}
+
 data "aws_vpc" "main" {
   tags = {
     Name        = "${var.environment}-vpc"
@@ -71,7 +73,7 @@ locals {
   
   # Peering configuration
   peer_connections = { for idx, peer in var.peer_configs : 
-    "${var.environment}-${var.aws_region}-to-${peer.region}" => {
+    "${var.environment}-${data.aws_region.current.name}-to-${peer.region}" => {
       index        = idx
       peer_region  = peer.region
       peer_vpc_id  = peer.vpc_id

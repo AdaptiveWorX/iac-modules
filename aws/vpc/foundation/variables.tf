@@ -15,10 +15,7 @@ variable "environment" {
   type        = string
 }
 
-variable "aws_region" {
-  description = "AWS region where resources will be created"
-  type        = string
-}
+# Note: aws_region variable is provided by Terragrunt's generated provider configuration
 
 variable "client_id" {
   description = "Client identifier"
