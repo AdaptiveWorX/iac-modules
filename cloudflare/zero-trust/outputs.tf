@@ -13,7 +13,7 @@ output "tunnel_name" {
 
 output "tunnel_token" {
   description = "The token for the Cloudflare tunnel"
-  value       = cloudflare_zero_trust_tunnel_cloudflared.main.tunnel_token
+  value       = cloudflare_zero_trust_tunnel_cloudflared.main.token
   sensitive   = true
 }
 

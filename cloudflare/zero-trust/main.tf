@@ -96,7 +96,7 @@ resource "cloudflare_dns_record" "tunnel" {
 resource "aws_ssm_parameter" "tunnel_token" {
   name  = "/${var.environment}/cloudflare/tunnel/token"
   type  = "SecureString"
-  value = cloudflare_zero_trust_tunnel_cloudflared.main.tunnel_token
+  value = cloudflare_zero_trust_tunnel_cloudflared.main.token
   
   description = "Cloudflare tunnel token for ${var.environment} environment"
   
