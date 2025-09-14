@@ -1,10 +1,8 @@
 # Copyright (c) Adaptive Technology
 # SPDX-License-Identifier: Apache-2.0
 
-variable "aws_region" {
-  description = "AWS region for certificate deployment"
-  type        = string
-}
+# Note: aws_region variable is provided by Terragrunt's generated provider_config.tf
+# Do not declare it here to avoid duplicate variable errors
 
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
