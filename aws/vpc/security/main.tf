@@ -71,7 +71,7 @@ locals {
   
   # Peering configuration
   peer_connections = { for idx, peer in var.peer_configs : 
-    "${var.environment}-${var.current_region}-to-${peer.region}" => {
+    "${var.environment}-${var.aws_region}-to-${peer.region}" => {
       index        = idx
       peer_region  = peer.region
       peer_vpc_id  = peer.vpc_id
