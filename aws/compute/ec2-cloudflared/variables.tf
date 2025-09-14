@@ -1,17 +1,8 @@
 # Copyright (c) Adaptive Technology
 # SPDX-License-Identifier: Apache-2.0
 
-variable "name_prefix" {
-  description = "Prefix for all resource names"
-  type        = string
-  validation {
-    condition     = length(var.name_prefix) > 0 && length(var.name_prefix) <= 30
-    error_message = "Name prefix must be between 1 and 30 characters."
-  }
-}
-
 variable "environment" {
-  description = "Environment name (e.g., dev, staging, prod)"
+  description = "Environment name (dev, staging, prod)"
   type        = string
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
@@ -19,170 +10,114 @@ variable "environment" {
   }
 }
 
-variable "vpc_id" {
-  description = "VPC ID where the cloudflared instance will be deployed"
-  type        = string
-}
-
-variable "subnet_id" {
-  description = "Specific subnet ID for the cloudflared instance. If not provided, will use the first available private subnet."
-  type        = string
-  default     = ""
-}
-
-variable "region" {
-  description = "AWS region for deployment"
-  type        = string
-  default     = "us-east-1"
-}
-
 variable "instance_type" {
-  description = "EC2 instance type for cloudflared"
+  description = "EC2 instance type for the Cloudflare tunnel"
   type        = string
-  default     = "t4g.micro"
-  validation {
-    condition     = can(regex("^t4g\\.", var.instance_type))
-    error_message = "Instance type must be ARM-based (t4g.*) for cost optimization."
-  }
+  default     = "t4g.nano"
 }
 
-variable "root_volume_size" {
-  description = "Size of the root EBS volume in GB"
+variable "min_size" {
+  description = "Minimum number of instances in the Auto Scaling Group"
   type        = number
-  default     = 10
-  validation {
-    condition     = var.root_volume_size >= 8 && var.root_volume_size <= 100
-    error_message = "Root volume size must be between 8 and 100 GB."
-  }
+  default     = 1
 }
 
-variable "tunnel_name" {
-  description = "Name of the Cloudflare tunnel"
+variable "max_size" {
+  description = "Maximum number of instances in the Auto Scaling Group"
+  type        = number
+  default     = 3
+}
+
+variable "desired_capacity" {
+  description = "Desired number of instances in the Auto Scaling Group"
+  type        = number
+  default     = 2
+}
+
+variable "vpc_id" {
+  description = "VPC ID where the tunnel instances will be deployed"
   type        = string
-  validation {
-    condition     = can(regex("^[a-z0-9-]+$", var.tunnel_name))
-    error_message = "Tunnel name must contain only lowercase letters, numbers, and hyphens."
-  }
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs for the Auto Scaling Group"
+  type        = list(string)
 }
 
 variable "tunnel_token_parameter" {
-  description = "SSM parameter path containing the Cloudflare tunnel token"
+  description = "SSM Parameter name containing the Cloudflare tunnel token"
   type        = string
-  default     = ""
 }
 
-variable "tunnel_routes" {
-  description = "List of CIDR blocks to route through the tunnel"
-  type = list(object({
-    cidr        = string
-    region      = string
-    description = string
-  }))
-  default = []
-}
-
-variable "cloudflared_version" {
-  description = "Version of cloudflared to install"
+variable "cloudflare_account_id" {
+  description = "Cloudflare account ID"
   type        = string
-  default     = "2025.8.1"  # Latest stable version as of Sep 2025
+  default     = "f23ad949750ddaf360446a334bffdc3d"
 }
 
-variable "enable_cross_account_access" {
-  description = "Enable cross-account IAM role assumption"
-  type        = bool
-  default     = false
+variable "aws_region" {
+  description = "AWS region for the deployment"
+  type        = string
 }
 
-variable "target_account_ids" {
-  description = "List of AWS account IDs that can be accessed from this tunnel"
-  type        = list(string)
-  default     = []
-  validation {
-    condition = alltrue([
-      for account_id in var.target_account_ids : can(regex("^[0-9]{12}$", account_id))
-    ])
-    error_message = "All target account IDs must be 12-digit numbers."
-  }
-}
-
-variable "log_retention_days" {
-  description = "CloudWatch log retention period in days"
-  type        = number
-  default     = 7
-  validation {
-    condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653], var.log_retention_days)
-    error_message = "Log retention days must be a valid CloudWatch retention period."
-  }
-}
-
-variable "metrics_interval" {
-  description = "Interval in seconds for cloudflared to send metrics"
-  type        = number
-  default     = 60
-  validation {
-    condition     = var.metrics_interval >= 30 && var.metrics_interval <= 300
-    error_message = "Metrics interval must be between 30 and 300 seconds."
-  }
-}
-
-variable "alarm_actions" {
-  description = "List of ARNs to notify when CloudWatch alarms trigger"
-  type        = list(string)
-  default     = []
-}
-
-variable "create_status_parameter" {
-  description = "Create an SSM parameter with tunnel status information"
+variable "enable_monitoring" {
+  description = "Enable detailed monitoring for EC2 instances"
   type        = bool
   default     = true
 }
 
-variable "tags" {
-  description = "Tags to apply to all resources"
-  type        = map(string)
-  default     = {}
+variable "enable_auto_scaling" {
+  description = "Enable auto-scaling based on CPU utilization"
+  type        = bool
+  default     = true
 }
 
 variable "enable_auto_recovery" {
-  description = "Enable automatic EC2 instance recovery on failure"
+  description = "Enable auto-recovery for failed instances"
   type        = bool
   default     = true
 }
 
-variable "enable_detailed_monitoring" {
-  description = "Enable detailed CloudWatch monitoring for the EC2 instance"
-  type        = bool
-  default     = true
+variable "cpu_target_value" {
+  description = "Target CPU utilization percentage for auto-scaling"
+  type        = number
+  default     = 70
 }
 
-variable "user_data_variables" {
-  description = "Additional variables to pass to the user data script"
+variable "health_check_grace_period" {
+  description = "Time in seconds after instance launch before checking health"
+  type        = number
+  default     = 300
+}
+
+variable "cross_account_role_arns" {
+  description = "Map of environment to cross-account role ARNs for access"
   type        = map(string)
   default     = {}
 }
 
-variable "security_group_ingress_rules" {
-  description = "Additional ingress rules for the security group"
-  type = list(object({
-    description = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
-  }))
-  default = []
+variable "ingress_cidr_blocks" {
+  description = "CIDR blocks allowed to access the instances (usually not needed)"
+  type        = list(string)
+  default     = []
 }
 
-variable "cloudflare_api_endpoint" {
-  description = "Cloudflare API endpoint for tunnel registration"
-  type        = string
-  default     = "https://api.cloudflare.com/client/v4"
+variable "egress_cidr_blocks" {
+  description = "CIDR blocks for egress traffic"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }
 
-variable "cloudflare_tunnel_endpoint" {
-  description = "Cloudflare tunnel endpoint"
-  type        = string
-  default     = "https://tunnel.cloudflare.com"
+variable "cloudwatch_log_retention" {
+  description = "CloudWatch log retention in days"
+  type        = number
+  default     = 7
+}
+
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {}
 }
 
 variable "enable_ssm_session_manager" {
@@ -191,38 +126,75 @@ variable "enable_ssm_session_manager" {
   default     = true
 }
 
-variable "ssm_parameter_prefix" {
-  description = "Prefix for SSM parameters used by the tunnel"
+variable "key_name" {
+  description = "EC2 Key Pair name for SSH access (optional)"
   type        = string
-  default     = "/cloudflare/tunnel"
+  default     = ""
 }
 
-variable "dns_servers" {
-  description = "Custom DNS servers for the cloudflared instance"
-  type        = list(string)
-  default     = ["169.254.169.253"]
+variable "enable_ebs_encryption" {
+  description = "Enable EBS volume encryption"
+  type        = bool
+  default     = true
 }
 
-variable "health_check_interval" {
-  description = "Interval in seconds between health checks"
+variable "ebs_kms_key_id" {
+  description = "KMS key ID for EBS volume encryption"
+  type        = string
+  default     = ""
+}
+
+variable "root_volume_size" {
+  description = "Size of the root EBS volume in GB"
   type        = number
-  default     = 30
+  default     = 8
 }
 
-variable "health_check_timeout" {
-  description = "Timeout in seconds for health checks"
-  type        = number
-  default     = 10
+variable "root_volume_type" {
+  description = "Type of the root EBS volume"
+  type        = string
+  default     = "gp3"
 }
 
-variable "max_retries" {
-  description = "Maximum number of retries for cloudflared connection"
-  type        = number
-  default     = 5
+variable "enable_termination_protection" {
+  description = "Enable termination protection for the Auto Scaling Group"
+  type        = bool
+  default     = false
 }
 
-variable "retry_interval" {
-  description = "Interval in seconds between connection retries"
-  type        = number
-  default     = 30
+variable "notification_topic_arn" {
+  description = "SNS topic ARN for Auto Scaling notifications"
+  type        = string
+  default     = ""
+}
+
+variable "cloudflare_dns_hostname" {
+  description = "DNS hostname for the Cloudflare tunnel"
+  type        = string
+  default     = ""
+}
+
+# Cross-Account Access Configuration
+variable "enable_cross_account_access" {
+  description = "Enable creation of cross-account role in target account"
+  type        = bool
+  default     = false
+}
+
+variable "target_account_id" {
+  description = "Target AWS account ID for cross-account access"
+  type        = string
+  default     = ""
+}
+
+variable "target_account_role_arn" {
+  description = "ARN of the role to assume in target account for creating cross-account resources"
+  type        = string
+  default     = ""
+}
+
+variable "alert_email" {
+  description = "Email address for CloudWatch alarm notifications"
+  type        = string
+  default     = ""
 }

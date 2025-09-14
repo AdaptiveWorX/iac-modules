@@ -2,229 +2,79 @@
 # SPDX-License-Identifier: Apache-2.0
 
 terraform {
-  required_version = ">= 1.10.0"
   required_providers {
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 5.0"
-    }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"   # Latest 3.x version as of Sep 2025
+      version = ">= 5.0.0"
     }
   }
 }
 
-# Data sources
-data "aws_caller_identity" "current" {}
-
-data "aws_region" "current" {}
-
-# Local variables for dynamic configuration
-locals {
-  tunnel_name = "${var.name_prefix}-${var.environment}-tunnel"
-  
-  # Parse tunnel routes from input
-  tunnel_routes = [
-    for route in var.vpc_routes : {
-      network = route.cidr
-      comment = "${route.description} - ${route.region}"
-      enabled = route.enabled
-    }
-  ]
-  
-  # DNS configuration
-  dns_subdomain = var.environment == "prod" ? "tunnel" : "tunnel-${var.environment}"
-  dns_fqdn      = "${local.dns_subdomain}.${var.dns_zone}"
-  
-  # Tags for resources
-  common_tags = merge(
-    var.tags,
-    {
-      Environment = var.environment
-      ManagedBy   = "Terraform"
-      Purpose     = "CloudflareZeroTrust"
-      Module      = "zero-trust-simplified"
-    }
-  )
-}
-
-# Create Cloudflare tunnel
-resource "cloudflare_zero_trust_tunnel_cloudflared" "main" {
-  account_id = var.cloudflare_account_id
-  name       = local.tunnel_name
-}
-
-# Generate random secret for tunnel (used for authentication)
+# Create the Cloudflare Zero Trust Tunnel
 resource "random_password" "tunnel_secret" {
-  length  = 32
-  special = false
+  length = 64
 }
 
-# Create tunnel routes for VPC access
-resource "cloudflare_zero_trust_tunnel_cloudflared_route" "vpc_routes" {
-  for_each = {
-    for idx, route in local.tunnel_routes : 
-    "${var.environment}-${idx}" => route if route.enabled
+resource "cloudflare_zero_trust_tunnel_cloudflared" "tunnel" {
+  account_id    = var.cloudflare_account_id
+  name          = "${var.prefix}-cf-tunnel"
+  config_src    = var.config_src
+  tunnel_secret = base64encode(random_password.tunnel_secret.result)
+  
+  lifecycle {
+    # This allows updating the tunnel without destroying and recreating it
+    create_before_destroy = true
   }
-  
+}
+
+# Create Cloudflare Tunnel Routes from a list
+# Only create routes where manage_routes[network] is true (or not specified, defaulting to true)
+resource "cloudflare_zero_trust_tunnel_cloudflared_route" "routes" {
+  for_each = {
+    for i, route in var.routes : route.network => route
+    if lookup(var.manage_routes, route.network, true)
+  }
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.main.id
-  network    = each.value.network
-  comment    = each.value.comment
-}
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
+  network    = each.key
+  comment    = "Tunnel route for ${each.value.comment}"
 
-# DNS record for tunnel
-resource "cloudflare_dns_record" "tunnel" {
-  count = var.create_dns_record ? 1 : 0
-  
-  zone_id = var.cloudflare_zone_id
-  name    = local.dns_subdomain
-  content = "${cloudflare_zero_trust_tunnel_cloudflared.main.id}.cfargotunnel.com"
-  type    = "CNAME"
-  ttl     = 1  # Automatic TTL when proxied
-  proxied = true
-  comment = "Cloudflare Zero Trust tunnel for ${var.environment} environment"
-}
-
-# Store tunnel token in AWS SSM Parameter Store
-# The tunnel token for cloudflared is derived from the tunnel's ID and account details
-resource "aws_ssm_parameter" "tunnel_token" {
-  name  = "/${var.environment}/cloudflare/tunnel/token"
-  type  = "SecureString"
-  # For cloudflare_zero_trust_tunnel_cloudflared, we need to construct the token
-  # The actual token is managed by Cloudflare when the tunnel is created
-  value = jsonencode({
-    tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.main.id
-    account_id = var.cloudflare_account_id
-    secret     = random_password.tunnel_secret.result
-  })
-  
-  description = "Cloudflare tunnel configuration for ${var.environment} environment"
-  
-  tags = local.common_tags
-}
-
-# Store tunnel ID for reference
-resource "aws_ssm_parameter" "tunnel_id" {
-  name  = "/${var.environment}/cloudflare/tunnel/id"
-  type  = "String"
-  value = cloudflare_zero_trust_tunnel_cloudflared.main.id
-  
-  description = "Cloudflare tunnel ID for ${var.environment} environment"
-  
-  tags = local.common_tags
-}
-
-# Store tunnel configuration
-resource "aws_ssm_parameter" "tunnel_config" {
-  name  = "/${var.environment}/cloudflare/tunnel/config"
-  type  = "String"
-  value = jsonencode({
-    tunnel_id    = cloudflare_zero_trust_tunnel_cloudflared.main.id
-    tunnel_name  = local.tunnel_name
-    account_id   = var.cloudflare_account_id
-    dns_fqdn     = local.dns_fqdn
-    environment  = var.environment
-    routes       = local.tunnel_routes
-    created_at   = timestamp()
-  })
-  
-  description = "Cloudflare tunnel configuration for ${var.environment} environment"
-  
-  tags = local.common_tags
-}
-
-# Create Access Application (if enabled)
-resource "cloudflare_zero_trust_access_application" "main" {
-  count = var.create_access_application ? 1 : 0
-  
-  zone_id                   = var.cloudflare_zone_id
-  name                      = "${var.environment} Tunnel Access"
-  domain                    = var.access_domain != "" ? var.access_domain : local.dns_fqdn
-  type                      = "self_hosted"
-  session_duration          = var.session_duration
-  auto_redirect_to_identity = true
-  
-  # App launcher settings
-  app_launcher_visible = true
-}
-
-# Configure tunnel with WARP routing (simplified - config happens in cloudflared)
-# The actual tunnel configuration is handled by the cloudflared instance
-# using the token stored in SSM Parameter Store
-
-# Create CloudWatch log group for tunnel metrics
-resource "aws_cloudwatch_log_group" "tunnel" {
-  name              = "/cloudflare/tunnel/${var.environment}"
-  retention_in_days = var.log_retention_days
-  
-  tags = local.common_tags
-}
-
-# Create CloudWatch dashboard for monitoring
-resource "aws_cloudwatch_dashboard" "tunnel" {
-  count = var.create_dashboard ? 1 : 0
-  
-  dashboard_name = "${var.environment}-cloudflare-tunnel"
-  
-  dashboard_body = jsonencode({
-    widgets = [
-      {
-        type = "metric"
-        properties = {
-          metrics = [
-            ["CloudflareTunnel", "TunnelStatus", { stat = "Average", label = "Tunnel Status" }],
-            [".", "ActiveConnections", { stat = "Sum", label = "Active Connections" }],
-            [".", "TunnelRegistered", { stat = "Average", label = "Registration Status" }]
-          ]
-          period = 300
-          stat   = "Average"
-          region = data.aws_region.current.id
-          title  = "Tunnel Health Metrics"
-        }
-      },
-      {
-        type = "metric"
-        properties = {
-          metrics = [
-            ["AWS/EC2", "CPUUtilization", { stat = "Average", label = "CPU Usage" }],
-            [".", "NetworkIn", { stat = "Sum", label = "Network In" }],
-            [".", "NetworkOut", { stat = "Sum", label = "Network Out" }]
-          ]
-          period = 300
-          stat   = "Average"
-          region = data.aws_region.current.id
-          title  = "EC2 Instance Metrics"
-        }
-      }
+  # Manage route creation separately from the module by using lifecycle ignore_changes blocks
+  lifecycle {
+    ignore_changes = [
+      # Ignore changes to virtual_network_id to prevent conflicts
+      virtual_network_id,
     ]
-  })
+  }
 }
 
-# Create SNS topic for alerts
-resource "aws_sns_topic" "tunnel_alerts" {
-  count = var.create_alerts ? 1 : 0
-  
-  name = "${var.environment}-cloudflare-tunnel-alerts"
-  
-  tags = local.common_tags
-}
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "config" {
+  account_id = var.cloudflare_account_id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.tunnel.id
+  config = {
+    # Create ingress rules from the provided list and add catch-all rule
+    ingress = concat(
+      [
+        for rule in var.ingress_rules : {
+          hostname = rule.hostname != null ? rule.hostname : null
+          path     = rule.path != null ? rule.path : null
+          service  = rule.service
+        } if rule.service != "http_status:404"
+      ],
+      [{
+        service = "http_status:404"
+      }]
+    )
+  }
 
-# Create SNS topic subscription
-resource "aws_sns_topic_subscription" "tunnel_alerts_email" {
-  count = var.create_alerts && length(var.alert_emails) > 0 ? length(var.alert_emails) : 0
-  
-  topic_arn = aws_sns_topic.tunnel_alerts[0].arn
-  protocol  = "email"
-  endpoint  = var.alert_emails[count.index]
-}
-
-# Output tunnel webhook URL for health checks
-locals {
-  webhook_url = var.create_webhook ? "https://${local.dns_fqdn}/health" : null
+  lifecycle {
+    create_before_destroy = true
+    # This resource can't be destroyed via Terraform
+    prevent_destroy = false
+    # Ignore changes to computed fields that Cloudflare manages
+    ignore_changes = [
+      config,
+      source
+    ]
+  }
 }
