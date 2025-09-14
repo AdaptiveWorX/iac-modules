@@ -10,6 +10,11 @@ variable "environment" {
   type        = string
 }
 
+variable "aws_region" {
+  description = "AWS region where resources will be created"
+  type        = string
+}
+
 # ============================================================================
 # FLOW LOG VARIABLES
 # ============================================================================
