@@ -11,10 +11,10 @@ output "tunnel_name" {
   value       = cloudflare_zero_trust_tunnel_cloudflared.main.name
 }
 
-output "tunnel_token" {
-  description = "The token for the Cloudflare tunnel"
-  value       = cloudflare_zero_trust_tunnel_cloudflared.main.token
-  sensitive   = true
+# Tunnel token is now stored as JSON in SSM parameter
+output "tunnel_token_ssm_path" {
+  description = "SSM parameter path containing the tunnel token configuration"
+  value       = aws_ssm_parameter.tunnel_token.name
 }
 
 output "tunnel_cname" {
@@ -57,18 +57,18 @@ output "access_application_domain" {
 output "ssm_parameters" {
   description = "SSM parameter paths for tunnel configuration"
   value = {
-    token  = aws_ssm_parameter.tunnel_token.name
-    id     = aws_ssm_parameter.tunnel_id.name
-    config = aws_ssm_parameter.tunnel_config.name
+    token_config = aws_ssm_parameter.tunnel_token.name
+    id           = aws_ssm_parameter.tunnel_id.name
+    config       = aws_ssm_parameter.tunnel_config.name
   }
 }
 
 output "ssm_parameter_arns" {
   description = "SSM parameter ARNs for IAM policies"
   value = {
-    token  = aws_ssm_parameter.tunnel_token.arn
-    id     = aws_ssm_parameter.tunnel_id.arn
-    config = aws_ssm_parameter.tunnel_config.arn
+    token_config = aws_ssm_parameter.tunnel_token.arn
+    id           = aws_ssm_parameter.tunnel_id.arn
+    config       = aws_ssm_parameter.tunnel_config.arn
   }
 }
 

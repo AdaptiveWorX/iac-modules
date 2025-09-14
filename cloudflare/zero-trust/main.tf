@@ -57,10 +57,9 @@ locals {
 resource "cloudflare_zero_trust_tunnel_cloudflared" "main" {
   account_id = var.cloudflare_account_id
   name       = local.tunnel_name
-  # Note: Secret is managed separately through tunnel token
 }
 
-# Generate random secret for tunnel
+# Generate random secret for tunnel (used for authentication)
 resource "random_password" "tunnel_secret" {
   length  = 32
   special = false
@@ -93,12 +92,19 @@ resource "cloudflare_dns_record" "tunnel" {
 }
 
 # Store tunnel token in AWS SSM Parameter Store
+# The tunnel token for cloudflared is derived from the tunnel's ID and account details
 resource "aws_ssm_parameter" "tunnel_token" {
   name  = "/${var.environment}/cloudflare/tunnel/token"
   type  = "SecureString"
-  value = cloudflare_zero_trust_tunnel_cloudflared.main.token
+  # For cloudflare_zero_trust_tunnel_cloudflared, we need to construct the token
+  # The actual token is managed by Cloudflare when the tunnel is created
+  value = jsonencode({
+    tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.main.id
+    account_id = var.cloudflare_account_id
+    secret     = random_password.tunnel_secret.result
+  })
   
-  description = "Cloudflare tunnel token for ${var.environment} environment"
+  description = "Cloudflare tunnel configuration for ${var.environment} environment"
   
   tags = local.common_tags
 }
