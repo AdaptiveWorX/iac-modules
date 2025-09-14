@@ -13,7 +13,7 @@ output "tunnel_name" {
 
 output "tunnel_token" {
   description = "The token for the Cloudflare tunnel"
-  value       = cloudflare_zero_trust_tunnel_cloudflared.main.token
+  value       = cloudflare_zero_trust_tunnel_cloudflared.main.tunnel_token
   sensitive   = true
 }
 
@@ -25,7 +25,7 @@ output "tunnel_cname" {
 output "tunnel_routes" {
   description = "Configured VPC routes for the tunnel"
   value = {
-    for key, route in cloudflare_zero_trust_tunnel_route.vpc_routes : 
+    for key, route in cloudflare_zero_trust_tunnel_cloudflared_route.vpc_routes : 
     key => {
       network = route.network
       comment = route.comment
@@ -99,7 +99,7 @@ output "tunnel_configuration" {
     environment   = var.environment
     dns_fqdn      = local.dns_fqdn
     dns_subdomain = local.dns_subdomain
-    enabled_routes = length(cloudflare_zero_trust_tunnel_route.vpc_routes)
+    enabled_routes = length(cloudflare_zero_trust_tunnel_cloudflared_route.vpc_routes)
     warp_routing  = var.enable_warp_routing
   }
 }

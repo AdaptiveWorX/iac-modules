@@ -67,7 +67,7 @@ resource "random_password" "tunnel_secret" {
 }
 
 # Create tunnel routes for VPC access
-resource "cloudflare_zero_trust_tunnel_route" "vpc_routes" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_route" "vpc_routes" {
   for_each = {
     for idx, route in local.tunnel_routes : 
     "${var.environment}-${idx}" => route if route.enabled
@@ -96,7 +96,7 @@ resource "cloudflare_dns_record" "tunnel" {
 resource "aws_ssm_parameter" "tunnel_token" {
   name  = "/${var.environment}/cloudflare/tunnel/token"
   type  = "SecureString"
-  value = cloudflare_zero_trust_tunnel_cloudflared.main.token
+  value = cloudflare_zero_trust_tunnel_cloudflared.main.tunnel_token
   
   description = "Cloudflare tunnel token for ${var.environment} environment"
   
