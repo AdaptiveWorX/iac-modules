@@ -54,10 +54,10 @@ locals {
 }
 
 # Create Cloudflare tunnel
-resource "cloudflare_tunnel" "main" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "main" {
   account_id = var.cloudflare_account_id
   name       = local.tunnel_name
-  secret     = base64encode(random_password.tunnel_secret.result)
+  # Note: Secret is managed separately through tunnel token
 }
 
 # Generate random secret for tunnel
@@ -67,14 +67,14 @@ resource "random_password" "tunnel_secret" {
 }
 
 # Create tunnel routes for VPC access
-resource "cloudflare_tunnel_route" "vpc_routes" {
+resource "cloudflare_zero_trust_tunnel_route" "vpc_routes" {
   for_each = {
     for idx, route in local.tunnel_routes : 
     "${var.environment}-${idx}" => route if route.enabled
   }
   
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_tunnel.main.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.main.id
   network    = each.value.network
   comment    = each.value.comment
 }
@@ -85,7 +85,7 @@ resource "cloudflare_dns_record" "tunnel" {
   
   zone_id = var.cloudflare_zone_id
   name    = local.dns_subdomain
-  content = "${cloudflare_tunnel.main.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.main.id}.cfargotunnel.com"
   type    = "CNAME"
   ttl     = 1  # Automatic TTL when proxied
   proxied = true
@@ -96,7 +96,7 @@ resource "cloudflare_dns_record" "tunnel" {
 resource "aws_ssm_parameter" "tunnel_token" {
   name  = "/${var.environment}/cloudflare/tunnel/token"
   type  = "SecureString"
-  value = cloudflare_tunnel.main.tunnel_token
+  value = cloudflare_zero_trust_tunnel_cloudflared.main.token
   
   description = "Cloudflare tunnel token for ${var.environment} environment"
   
@@ -107,7 +107,7 @@ resource "aws_ssm_parameter" "tunnel_token" {
 resource "aws_ssm_parameter" "tunnel_id" {
   name  = "/${var.environment}/cloudflare/tunnel/id"
   type  = "String"
-  value = cloudflare_tunnel.main.id
+  value = cloudflare_zero_trust_tunnel_cloudflared.main.id
   
   description = "Cloudflare tunnel ID for ${var.environment} environment"
   
@@ -119,7 +119,7 @@ resource "aws_ssm_parameter" "tunnel_config" {
   name  = "/${var.environment}/cloudflare/tunnel/config"
   type  = "String"
   value = jsonencode({
-    tunnel_id    = cloudflare_tunnel.main.id
+    tunnel_id    = cloudflare_zero_trust_tunnel_cloudflared.main.id
     tunnel_name  = local.tunnel_name
     account_id   = var.cloudflare_account_id
     dns_fqdn     = local.dns_fqdn
@@ -134,7 +134,7 @@ resource "aws_ssm_parameter" "tunnel_config" {
 }
 
 # Create Access Application (if enabled)
-resource "cloudflare_access_application" "main" {
+resource "cloudflare_zero_trust_access_application" "main" {
   count = var.create_access_application ? 1 : 0
   
   zone_id                   = var.cloudflare_zone_id

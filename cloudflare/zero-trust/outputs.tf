@@ -3,29 +3,29 @@
 
 output "tunnel_id" {
   description = "The ID of the Cloudflare tunnel"
-  value       = cloudflare_tunnel.main.id
+  value       = cloudflare_zero_trust_tunnel_cloudflared.main.id
 }
 
 output "tunnel_name" {
   description = "The name of the Cloudflare tunnel"
-  value       = cloudflare_tunnel.main.name
+  value       = cloudflare_zero_trust_tunnel_cloudflared.main.name
 }
 
 output "tunnel_token" {
   description = "The token for the Cloudflare tunnel"
-  value       = cloudflare_tunnel.main.tunnel_token
+  value       = cloudflare_zero_trust_tunnel_cloudflared.main.token
   sensitive   = true
 }
 
 output "tunnel_cname" {
   description = "The CNAME record for the tunnel"
-  value       = "${cloudflare_tunnel.main.id}.cfargotunnel.com"
+  value       = "${cloudflare_zero_trust_tunnel_cloudflared.main.id}.cfargotunnel.com"
 }
 
 output "tunnel_routes" {
   description = "Configured VPC routes for the tunnel"
   value = {
-    for key, route in cloudflare_tunnel_route.vpc_routes : 
+    for key, route in cloudflare_zero_trust_tunnel_route.vpc_routes : 
     key => {
       network = route.network
       comment = route.comment
@@ -40,18 +40,18 @@ output "dns_record" {
     name    = local.dns_subdomain
     zone_id = var.cloudflare_zone_id
     type    = "CNAME"
-    value   = "${cloudflare_tunnel.main.id}.cfargotunnel.com"
+    value   = "${cloudflare_zero_trust_tunnel_cloudflared.main.id}.cfargotunnel.com"
   } : null
 }
 
 output "access_application_id" {
   description = "The ID of the Cloudflare Access application"
-  value       = var.create_access_application ? cloudflare_access_application.main[0].id : null
+  value       = var.create_access_application ? cloudflare_zero_trust_access_application.main[0].id : null
 }
 
 output "access_application_domain" {
   description = "The domain of the Cloudflare Access application"
-  value       = var.create_access_application ? cloudflare_access_application.main[0].domain : null
+  value       = var.create_access_application ? cloudflare_zero_trust_access_application.main[0].domain : null
 }
 
 output "ssm_parameters" {
@@ -93,13 +93,13 @@ output "sns_topic_arn" {
 output "tunnel_configuration" {
   description = "Complete tunnel configuration for reference"
   value = {
-    tunnel_id     = cloudflare_tunnel.main.id
+    tunnel_id     = cloudflare_zero_trust_tunnel_cloudflared.main.id
     tunnel_name   = local.tunnel_name
     account_id    = var.cloudflare_account_id
     environment   = var.environment
     dns_fqdn      = local.dns_fqdn
     dns_subdomain = local.dns_subdomain
-    enabled_routes = length(cloudflare_tunnel_route.vpc_routes)
+    enabled_routes = length(cloudflare_zero_trust_tunnel_route.vpc_routes)
     warp_routing  = var.enable_warp_routing
   }
 }
