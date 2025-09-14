@@ -65,7 +65,7 @@ resource "aws_acm_certificate" "multi_domain" {
     # IMPORTANT: Set to false to enable in-place updates
     # When true, forces new ARN on certificate content change
     # When false, attempts to update certificate in-place preserving ARN
-    create_before_destroy = var.force_new_certificate_arn
+    create_before_destroy = false
     
     # Ignore tag changes that are managed externally
     ignore_changes = [
@@ -94,7 +94,7 @@ resource "aws_acm_certificate" "cloudfront" {
 
   lifecycle {
     # CloudFront certificates should preserve ARN for distribution continuity
-    create_before_destroy = var.force_new_certificate_arn
+    create_before_destroy = false
     
     ignore_changes = [
       tags["LastUpdated"],
