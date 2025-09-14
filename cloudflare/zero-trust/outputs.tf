@@ -82,7 +82,7 @@ output "cloudwatch_log_group" {
 
 output "cloudwatch_dashboard_url" {
   description = "URL to CloudWatch dashboard for tunnel monitoring"
-  value       = var.create_dashboard ? "https://${data.aws_region.current.name}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${aws_cloudwatch_dashboard.tunnel[0].dashboard_name}" : null
+  value       = var.create_dashboard ? "https://${data.aws_region.current.id}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.id}#dashboards:name=${aws_cloudwatch_dashboard.tunnel[0].dashboard_name}" : null
 }
 
 output "sns_topic_arn" {
@@ -111,7 +111,7 @@ output "webhook_url" {
 
 output "deployment_region" {
   description = "AWS region where tunnel resources are deployed"
-  value       = data.aws_region.current.name
+  value       = data.aws_region.current.id
 }
 
 output "deployment_account" {

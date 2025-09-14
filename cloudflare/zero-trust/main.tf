@@ -178,7 +178,7 @@ resource "aws_cloudwatch_dashboard" "tunnel" {
           ]
           period = 300
           stat   = "Average"
-          region = data.aws_region.current.name
+          region = data.aws_region.current.id
           title  = "Tunnel Health Metrics"
         }
       },
@@ -192,7 +192,7 @@ resource "aws_cloudwatch_dashboard" "tunnel" {
           ]
           period = 300
           stat   = "Average"
-          region = data.aws_region.current.name
+          region = data.aws_region.current.id
           title  = "EC2 Instance Metrics"
         }
       }
