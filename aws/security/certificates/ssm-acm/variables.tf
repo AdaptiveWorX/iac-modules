@@ -51,7 +51,7 @@ variable "certificate_update_behavior" {
 variable "enable_certificate_versioning" {
   description = "Enable certificate version tracking in SSM"
   type        = bool
-  default     = true
+  default     = false  # Set to false by default since the SSM parameter may not exist
 }
 
 variable "certificate_rotation_days" {
