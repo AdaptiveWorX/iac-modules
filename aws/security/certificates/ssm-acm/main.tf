@@ -37,8 +37,9 @@ data "aws_ssm_parameter" "expiry" {
   name     = "/certificates/multi-domain/expiry"
 }
 
-# Get SSM parameter versions to track changes
+# Get SSM parameter versions to track changes (optional - may not exist)
 data "aws_ssm_parameter" "certificate_version" {
+  count    = var.enable_certificate_versioning ? 1 : 0
   provider = aws.secops
   name     = "/certificates/multi-domain/certificate-version"
 }
@@ -56,7 +57,7 @@ resource "aws_acm_certificate" "multi_domain" {
     Purpose         = "regional"
     Region          = var.aws_region
     ManagedBy       = "terragrunt"
-    CertVersion     = try(data.aws_ssm_parameter.certificate_version.value, "1")
+    CertVersion     = var.enable_certificate_versioning && length(data.aws_ssm_parameter.certificate_version) > 0 ? data.aws_ssm_parameter.certificate_version[0].value : "1"
     LastUpdated     = timestamp()
     UpdateBehavior  = var.certificate_update_behavior
   })
@@ -87,7 +88,7 @@ resource "aws_acm_certificate" "cloudfront" {
     Expiry          = data.aws_ssm_parameter.expiry.value
     Purpose         = "cloudfront"
     ManagedBy       = "terragrunt"
-    CertVersion     = try(data.aws_ssm_parameter.certificate_version.value, "1")
+    CertVersion     = var.enable_certificate_versioning && length(data.aws_ssm_parameter.certificate_version) > 0 ? data.aws_ssm_parameter.certificate_version[0].value : "1"
     LastUpdated     = timestamp()
     UpdateBehavior  = var.certificate_update_behavior
   })

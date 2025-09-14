@@ -19,11 +19,12 @@ output "certificate_status" {
 output "certificate_expiry" {
   description = "Certificate expiration date from SSM"
   value       = data.aws_ssm_parameter.expiry.value
+  sensitive   = true  # Mark as sensitive since it comes from SSM
 }
 
 output "certificate_version" {
   description = "Certificate version identifier"
-  value       = try(data.aws_ssm_parameter.certificate_version.value, "unknown")
+  value       = var.enable_certificate_versioning && length(data.aws_ssm_parameter.certificate_version) > 0 ? data.aws_ssm_parameter.certificate_version[0].value : "unknown"
 }
 
 output "cloudfront_certificate_arn" {
