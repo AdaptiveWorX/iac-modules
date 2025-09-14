@@ -43,8 +43,4 @@ variable "common_tags" {
   default     = {}
 }
 
-variable "aws_region" {
-  description = "AWS region where resources will be created"
-  type        = string
-  default     = "us-east-1"
-}
+# Note: aws_region variable is provided by Terragrunt's generated provider configuration
