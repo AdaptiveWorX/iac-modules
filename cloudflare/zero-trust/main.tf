@@ -12,14 +12,20 @@ terraform {
 
 # Create the Cloudflare Zero Trust Tunnel
 resource "random_password" "tunnel_secret" {
+  count = var.tunnel_secret == "" ? 1 : 0
   length = 64
+}
+
+locals {
+  tunnel_secret_raw = var.tunnel_secret != "" ? var.tunnel_secret : try(random_password.tunnel_secret[0].result, "")
+  tunnel_secret_b64 = base64encode(local.tunnel_secret_raw)
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared" "tunnel" {
   account_id    = var.cloudflare_account_id
   name          = "${var.prefix}-cf-tunnel"
   config_src    = var.config_src
-  tunnel_secret = base64encode(random_password.tunnel_secret.result)
+  tunnel_secret = local.tunnel_secret_b64
   
   lifecycle {
     # This allows updating the tunnel without destroying and recreating it
@@ -73,7 +79,6 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "config" {
     prevent_destroy = false
     # Ignore changes to computed fields that Cloudflare manages
     ignore_changes = [
-      config,
       source
     ]
   }

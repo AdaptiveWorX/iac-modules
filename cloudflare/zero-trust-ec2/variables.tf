@@ -4,7 +4,11 @@
 variable "cloudflare_account_id" {
   description = "Cloudflare account ID"
   type        = string
-  default     = "f23ad949750ddaf360446a334bffdc3d"
+
+  validation {
+    condition     = length(trim(var.cloudflare_account_id)) > 0
+    error_message = "Provide a non-empty Cloudflare account ID."
+  }
 }
 
 variable "tunnel_name" {
@@ -24,6 +28,11 @@ variable "environment" {
 variable "cloudflare_zone_id" {
   description = "Cloudflare DNS zone ID"
   type        = string
+
+  validation {
+    condition     = length(trim(var.cloudflare_zone_id)) > 0
+    error_message = "Provide a non-empty Cloudflare zone ID."
+  }
 }
 
 variable "dns_hostname" {
@@ -58,19 +67,19 @@ variable "ingress_rules" {
     service  = string
     origin_request = optional(object({
       connect_timeout          = optional(string)
-      tls_timeout             = optional(string)
-      tcp_keep_alive          = optional(string)
-      no_happy_eyeballs       = optional(bool)
-      keep_alive_connections  = optional(number)
-      keep_alive_timeout      = optional(string)
-      http_host_header        = optional(string)
-      origin_server_name      = optional(string)
-      ca_pool                 = optional(string)
-      no_tls_verify          = optional(bool)
+      tls_timeout              = optional(string)
+      tcp_keep_alive           = optional(string)
+      no_happy_eyeballs        = optional(bool)
+      keep_alive_connections   = optional(number)
+      keep_alive_timeout       = optional(string)
+      http_host_header         = optional(string)
+      origin_server_name       = optional(string)
+      ca_pool                  = optional(string)
+      no_tls_verify            = optional(bool)
       disable_chunked_encoding = optional(bool)
-      proxy_address           = optional(string)
-      proxy_port              = optional(number)
-      proxy_type              = optional(string)
+      proxy_address            = optional(string)
+      proxy_port               = optional(number)
+      proxy_type               = optional(string)
     }))
   }))
   default = [
@@ -128,11 +137,11 @@ variable "static_routes" {
 variable "tunnel_config" {
   description = "Additional tunnel configuration options"
   type = object({
-    protocol           = optional(string, "quic")
-    loglevel          = optional(string, "info")
-    transport_protocol = optional(string, "quic")
-    no_tls_verify     = optional(bool, false)
-    grace_period      = optional(string, "30s")
+    protocol                 = optional(string, "quic")
+    loglevel                 = optional(string, "info")
+    transport_protocol       = optional(string, "quic")
+    no_tls_verify            = optional(bool, false)
+    grace_period             = optional(string, "30s")
     metrics_update_frequency = optional(string, "5s")
   })
   default = {}

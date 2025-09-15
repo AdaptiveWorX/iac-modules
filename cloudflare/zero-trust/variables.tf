@@ -4,6 +4,11 @@
 variable "cloudflare_account_id" {
   description = "The account ID in Cloudflare."
   type        = string
+
+  validation {
+    condition     = length(trim(var.cloudflare_account_id)) > 0
+    error_message = "Provide a non-empty Cloudflare account ID."
+  }
 }
 
 variable "prefix" {
