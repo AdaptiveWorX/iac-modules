@@ -19,7 +19,7 @@ output "certificate_status" {
 output "certificate_expiry" {
   description = "Certificate expiration date from SSM"
   value       = data.aws_ssm_parameter.expiry.value
-  sensitive   = true  # Mark as sensitive since it comes from SSM
+  sensitive   = true # Mark as sensitive since it comes from SSM
 }
 
 output "certificate_version" {

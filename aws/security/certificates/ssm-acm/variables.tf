@@ -1,8 +1,10 @@
 # Copyright (c) Adaptive Technology
 # SPDX-License-Identifier: Apache-2.0
 
-# Note: aws_region variable is provided by Terragrunt's generated provider_config.tf
-# Do not declare it here to avoid duplicate variable errors
+variable "aws_region" {
+  description = "AWS region where resources will be created"
+  type        = string
+}
 
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
@@ -34,14 +36,14 @@ variable "alert_email" {
 variable "force_new_certificate_arn" {
   description = "Force creation of new certificate ARN on update (true) or attempt in-place update (false)"
   type        = bool
-  default     = false  # Default to in-place updates to preserve ARNs
+  default     = false # Default to in-place updates to preserve ARNs
 }
 
 variable "certificate_update_behavior" {
   description = "How to handle certificate updates: 'in-place' preserves ARN, 'recreate' forces new ARN"
   type        = string
   default     = "in-place"
-  
+
   validation {
     condition     = contains(["in-place", "recreate"], var.certificate_update_behavior)
     error_message = "Update behavior must be either 'in-place' or 'recreate'."
@@ -51,7 +53,7 @@ variable "certificate_update_behavior" {
 variable "enable_certificate_versioning" {
   description = "Enable certificate version tracking in SSM"
   type        = bool
-  default     = false  # Set to false by default since the SSM parameter may not exist
+  default     = false # Set to false by default since the SSM parameter may not exist
 }
 
 variable "certificate_rotation_days" {
