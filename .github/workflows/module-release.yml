@@ -37,8 +37,7 @@ permissions:
   pull-requests: write
   id-token: write
 
-env:
-  OPENTOFU_VERSION: "1.10.0"
+# env values will be loaded from SSM parameters
 
 jobs:
   test-modules:
@@ -57,6 +56,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Bootstrap authentication: role ARN is stored in AWS_OIDC_ROLE_SECOPS environment secret for centralized management.
+          # All other configuration values are then loaded dynamically from SSM Parameter Store.
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_SECOPS }}
+          role-session-name: github-actions-${{ github.run_id }}
+          aws-region: us-east-1
+
+      - name: Load Configuration from SSM
+        id: load-config
+        run: |
+          set -euo pipefail
+          echo "Loading CI/CD configuration from SSM..."
+          if ! OPENTOFU_VERSION=$(aws ssm get-parameter \
+            --name "/worx/common/ci/opentofu-version" \
+            --query 'Parameter.Value' \
+            --output text \
+            --region us-east-1 2>/dev/null); then
+            echo "::error::Failed to read /worx/common/ci/opentofu-version from SSM" >&2
+            exit 1
+          fi
+
+          if [ -z "$OPENTOFU_VERSION" ] || [ "$OPENTOFU_VERSION" = "None" ]; then
+            echo "::error::SSM parameter /worx/common/ci/opentofu-version is empty" >&2
+            exit 1
+          fi
+
+          echo "OPENTOFU_VERSION=$OPENTOFU_VERSION" >> "$GITHUB_ENV"
+          echo "Loaded OpenTofu version: $OPENTOFU_VERSION"
 
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
